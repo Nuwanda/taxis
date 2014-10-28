@@ -8,12 +8,15 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [om "0.7.3"]
                  [prismatic/om-tools "0.3.6" :exclusions [org.clojure/clojure]]
+                 [secretary "1.2.1"]
                  ;;Server dependencies
                  [compojure "1.1.5"]
                  [ring/ring-devel "1.1.8"]
                  [ring/ring-core "1.1.8"]
                  [http-kit "2.0.0"]
-                 [clj-json "0.5.3"]]
+                 [clj-json "0.5.3"]
+                 ;;server/client ws over channels
+                 [jarohen/chord "0.4.2" :exclusions [org.clojure/clojure]]]
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 
