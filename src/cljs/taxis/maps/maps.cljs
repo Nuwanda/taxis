@@ -1,10 +1,9 @@
 (ns taxis.maps
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [om.core :as om :include-macros true]
-            [om.dom :refer [render-to-str]]
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
-            [cljs.core.async :refer [put! <! chan timeout]]
+            [cljs.core.async :refer [put! <! chan timeout close!]]
             [taxis.utils :as utils]
             [taxis.maps.directions :as directions]))
 
@@ -131,6 +130,7 @@
     (.open win map (get-marker owner src))))
 
 (defn- close-info-window [owner]
+  "Close an open info window"
   (let [w (om/get-state owner :info-window)]
     (when w
       (do
@@ -182,16 +182,17 @@
 (defn- event-loop [data owner]
   "Message handling loop"
   (go-loop []
-           (let [[event params] (<! (:events-in @data))]
-             (cond
-               (= event :center) (center-map data owner params)
-               (= event :add-taxis) (add-taxis owner params)
-               (= event :pickup) (pu-notice owner params)
-               (= event :pu-accept) (accept-pickup data owner)
-               (= event :pu-reject) (reject-pickup data owner)
-               (= event :pu-accepted) (wait-for-pickup data owner params)
-               :else (print "unknown event")))
-           (recur)))
+           (if-let [[event params] (<! (:events-in @data))]
+             (do
+               (cond
+                 (= event :center) (center-map data owner params)
+                 (= event :add-taxis) (add-taxis owner params)
+                 (= event :pickup) (pu-notice owner params)
+                 (= event :pu-accept) (accept-pickup data owner)
+                 (= event :pu-reject) (reject-pickup data owner)
+                 (= event :pu-accepted) (wait-for-pickup data owner params)
+                 :else (print "unknown event"))
+               (recur)))))
 
 (defcomponent map-view
               "Google Maps wrapper component"
@@ -203,8 +204,12 @@
                            :pick-up {}
                            :markers {}
                            :info-window nil})
-              (display-name [_]
-                            "Map")
+              (will-mount [_]
+                          (om/update! data :events-in (chan))
+                          (om/update! data :events-out (chan)))
+              (will-unmount [_]
+                            (close! (:events-in data))
+                            (close! (:events-out data)))
               (did-mount [_]
                          (let [map-node (om/get-node owner)
                                options #js {:center (google.maps.LatLng. lat lon)

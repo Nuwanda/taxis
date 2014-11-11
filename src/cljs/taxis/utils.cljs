@@ -11,3 +11,13 @@
 (defn attach-event [id cb]
   (let [type gevents/EventType.CLICK]
     (gevents/listen js/document type #(child-listen id cb))))
+
+(defn display [show?]
+  (if show?
+    nil
+    "none"))
+
+(defn- active [active?]
+  (if active?
+    " active"
+    ""))

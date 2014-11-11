@@ -47,7 +47,7 @@
   (go-loop []
            (when-let [{:keys [message error]} (<! ws-channel)]
              (if error
-               (prn (format "Error: '%s'." (pr-str error)))
+               (prn (format "Error: '%s'" (pr-str error)))
                (do
                  (prn (format "Received: '%s' at %s." (pr-str message) (Date.)))
                  (handle-message ws-channel message)))

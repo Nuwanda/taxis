@@ -30,7 +30,7 @@
     :builds [{:id "taxis"
               :source-paths ["src/cljs"]
               :compiler {
-                :output-to "taxis.js"
+                :output-to "out/taxis.js"
                 :output-dir "out"
                 :optimizations :none
                 :source-map true}}]})

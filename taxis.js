@@ -26,4 +26,6 @@ goog.addDependency("../chord/format.js", ['chord.format'], ['cljs.core', 'cljs.c
 goog.addDependency("../chord/client.js", ['chord.client'], ['cljs.core', 'cljs.core.async', 'chord.channels', 'chord.format']);
 goog.addDependency("../secretary/core.js", ['secretary.core'], ['cljs.core', 'clojure.string', 'clojure.walk']);
 goog.addDependency("../taxis/tests.js", ['taxis.tests'], ['taxis.maps', 'om_tools.dom', 'om_tools.core', 'cljs.core', 'chord.client', 'cljs.core.async', 'om.core', 'secretary.core']);
-goog.addDependency("../taxis/core.js", ['taxis.core'], ['taxis.maps', 'om_tools.dom', 'om_tools.core', 'cljs.core', 'taxis.tests', 'goog.history.EventType', 'chord.client', 'goog.History', 'cljs.core.async', 'om.core', 'secretary.core', 'goog.events']);
+goog.addDependency("../taxis/signin.js", ['taxis.signin'], ['goog.dom', 'om_tools.dom', 'om_tools.core', 'cljs.core', 'om.core', 'secretary.core']);
+goog.addDependency("../taxis/core.js", ['taxis.core'], ['taxis.maps', 'om_tools.dom', 'om_tools.core', 'cljs.core', 'taxis.tests', 'goog.history.EventType', 'chord.client', 'goog.History', 'cljs.core.async', 'om.core', 'secretary.core', 'goog.events', 'taxis.signin']);
+goog.addDependency("../taxis/settings.js", ['taxis.settings'], ['om_tools.dom', 'om_tools.core', 'cljs.core', 'om.core']);

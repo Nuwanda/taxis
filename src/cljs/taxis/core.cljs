@@ -5,6 +5,8 @@
             [om-tools.core :refer-macros [defcomponent]]
             [taxis.maps :as maps :refer [map-view]]
             [taxis.tests :as tests]
+            [taxis.signin :as signin]
+            [taxis.ride :as ride]
             [cljs.core.async :refer [chan put! <!]]
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
@@ -14,8 +16,8 @@
 
 (enable-console-print!)
 
-(def app-state (atom {:events-in  (chan)
-                      :events-out (chan)
+(def app-state (atom {:events-in  nil
+                      :events-out nil
                       :position {:lat 38.752739
                                  :lon -9.184769}}))
 
@@ -30,22 +32,76 @@
   (goog.events/listen EventType/NAVIGATE on-navigate)
   (.setEnabled true))
 
+(defcomponent placeholder [d o]
+              (render [_]
+                      (dom/div)))
+
 (defroute "/" {}
-          (om/root tests/pass-buttons
-                   app-state
-                   {:target (. js/document (getElementById "test-buttons"))}))
+          (do
+            (om/root tests/role-buttons
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/root placeholder
+                     nil
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/login" {}
+          (do
+            (om/root placeholder
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/root signin/signin-form
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
 
 (defroute "/taxi" {}
-          (om/root tests/taxi-buttons
-                   app-state
-                   {:target (. js/document (getElementById "test-buttons"))}))
+          (do
+            (om/root tests/taxi-buttons
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/root maps/map-view
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/pass" {}
+          (do
+            (om/root tests/pass-buttons
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/root maps/map-view
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/ride/create" {}
+          (do
+            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
+            (om/root ride/create-ride
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/ride/create/2" {}
+          (do
+            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
+            (om/root ride/second-step
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/ride/create/3" {}
+          (do
+            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
+            (om/root ride/final-step
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/ride/create/done" {}
+          (do
+            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
+            (om/root ride/ride-done
+                     app-state
+                     {:target (. js/document (getElementById "app"))})))
 
 
 ;;Om rendering
-(om/root tests/role-buttons
+(om/root tests/signin-buttons
          app-state
          {:target (. js/document (getElementById "test-buttons"))})
-
-(om/root maps/map-view
-         app-state
-         {:target (. js/document (getElementById "app"))})

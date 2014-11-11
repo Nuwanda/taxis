@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [chan put! <!]]))
 
-(defn- request-directions [start end]
+(defn request-directions [start end]
   (let [origin (google.maps.LatLng. (:lat start) (:lon start))
         dest   (google.maps.LatLng. (:lat end) (:lon end))
         mode   google.maps.TravelMode.DRIVING

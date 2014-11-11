@@ -4,7 +4,7 @@
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
             [taxis.maps :as maps :refer [map-view]]
-            [cljs.core.async :refer [chan put! <!]]
+            [cljs.core.async :refer [chan put! <! close!]]
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary]))
 
@@ -25,25 +25,26 @@
         srv-ch (om/get-state owner :server-chan)
         src    (om/get-state owner :id)]
     (go-loop []
-             (let [[e v]  (first (<! out-ch))
-                   lat    (get-in @data [:position :lat])
-                   lon    (get-in @data [:position :lon])]
-               (cond
-                 (= e :pickup)    (put! srv-ch {:type :pass :src src :dest v :data [:pickup {:src src :lat lat :lon lon}]})
-                 (= e :pu-accept) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-accepted {:src src}]})
-                 (= e :pu-reject) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-rejected {:src src}]})
-                 :else (.log js/console "Unexpected event")))
-             (recur))))
+             (if-let [[e v] (first (<! out-ch))]
+               (let [lat (get-in @data [:position :lat])
+                     lon (get-in @data [:position :lon])]
+                 (cond
+                   (= e :pickup) (put! srv-ch {:type :pass :src src :dest v :data [:pickup {:src src :lat lat :lon lon}]})
+                   (= e :pu-accept) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-accepted {:src src}]})
+                   (= e :pu-reject) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-rejected {:src src}]})
+                   :else (.log js/console "Unexpected event"))
+                 (recur))))))
 
 (defn- receive-from-server [owner data]
   (go-loop []
-           (let [msg (<! (om/get-state owner :server-chan))]
-             (if (:error msg)
-               (js/alert "Error communicating with server")
-               (do
-                 (print (str "Got: " msg))
-                 (put! (:events-in @data) (:message msg)))))
-           (recur)))
+           (if-let [msg (<! (om/get-state owner :server-chan))]
+             (do
+               (if (:error msg)
+                 (js/alert "Error communicating with server")
+                 (do
+                   (print (str "Got: " msg))
+                   (put! (:events-in @data) (:message msg))))
+               (recur)))))
 
 (defcomponent pass-buttons [data owner]
               (init-state [_]
@@ -59,6 +60,8 @@
                                   (om/set-state! owner :server-chan ws-channel)
                                   (receive-from-server owner data)
                                   (send-to-server owner data))))))
+              (will-unmount [_]
+                            (close! (om/get-state owner :server-chan)))
               (render-state [_ {:keys [server-chan id]}]
                             (dom/ul {:class "nav navbar-nav navbar-right"}
                                     (dom/li
@@ -75,7 +78,11 @@
                                                                                                      (get-in @data [:position :lon]))]
                                                                                  :src id
                                                                                  :type :pass})}
-                                                  "Taxis")))))
+                                                  "Taxis"))
+                                    (dom/li
+                                      (dom/button {:class "btn btn-primary"
+                                                   :on-click #(secretary/dispatch! "/ride/create")}
+                                                  "Create a Ride")))))
 
 (defn- set-location [data]
   (let [c (chan)]
@@ -118,6 +125,8 @@
                                   (om/set-state! owner :server-chan ws-channel)
                                   (receive-from-server owner data)
                                   (send-to-server owner data))))))
+              (will-unmount [_]
+                            (close! (om/get-state owner :server-chan)))
               (did-mount [_]
                          (set-location data))
               (render [_]
@@ -132,9 +141,17 @@
                       (dom/ul {:class "nav navbar-nav navbar-right"}
                         (dom/li
                           (dom/button {:class    "btn btn-primary"
-                                       :on-click #(secretary/dispatch! "/")}
+                                       :on-click #(secretary/dispatch! "/pass")}
                                       "Passenger"))
                         (dom/li
                           (dom/button {:class    "btn btn-primary"
                                        :on-click #(secretary/dispatch! "/taxi")}
                                       "Taxi")))))
+
+(defcomponent signin-buttons [data owner]
+              (render [_]
+                      (dom/ul {:class "nav navbar-nav navbar-right"}
+                              (dom/li
+                                (dom/button {:class "btn btn-primary"
+                                             :on-click #(secretary/dispatch! "/login")}
+                                            "Sign in")))))
