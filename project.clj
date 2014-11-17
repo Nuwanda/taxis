@@ -19,13 +19,13 @@
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 
-  :min-lein-version "2.0.0"
+  :min-lein-version "2.5.0"
 
   :uberjar-name "taxis.jar"
 
   :main "taxis.server"
 
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "src/cljs"]
 
   :cljsbuild { 
               :builds [{:id "taxis"
@@ -35,8 +35,7 @@
                                    :output-dir "out"
                                    :optimizations :none
                                    :source-map true}}]}
-  :profiles {
-             :uberjar {:hooks       [leiningen.cljsbuild]
+  :profiles {:uberjar {:hooks       [leiningen.cljsbuild]
                        :main        taxis.server
                        :aot         :all}})
 
