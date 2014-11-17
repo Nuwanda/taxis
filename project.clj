@@ -14,7 +14,6 @@
                  [ring/ring-devel "1.1.8"]
                  [ring/ring-core "1.1.8"]
                  [http-kit "2.0.0"]
-                 [clj-json "0.5.3"]
                  ;;server/client ws over channels
                  [jarohen/chord "0.4.2" :exclusions [org.clojure/clojure]]]
 
