@@ -28,10 +28,16 @@
   :source-paths ["src/clj"]
 
   :cljsbuild { 
-    :builds [{:id "taxis"
-              :source-paths ["src/cljs"]
-              :compiler {
-                :output-to "out/taxis.js"
-                :output-dir "out"
-                :optimizations :none
-                :source-map true}}]})
+              :builds [{:id "taxis"
+                        :source-paths ["src/cljs"]
+                        :compiler {
+                                   :output-to "out/taxis.js"
+                                   :output-dir "out"
+                                   :optimizations :none
+                                   :source-map true}}]}
+  :profiles {
+             :uberjar {:hooks       [leiningen.cljsbuild]
+                       :main        taxis.server
+                       :aot         :all}})
+
+
