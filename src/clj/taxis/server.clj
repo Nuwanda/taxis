@@ -60,7 +60,7 @@
 (def http-handler
   (if is-dev?
     (reload/wrap-reload (site #'all-routes))
-    (site routes)))
+    (site all-routes)))
 
 (defn -main [& args]
   (run-server http-handler {:port 8080}))
