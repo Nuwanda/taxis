@@ -63,5 +63,6 @@
     (reload/wrap-reload (site #'all-routes))
     (site all-routes)))
 
-(defn -main [& args]
-  (run-server http-handler {:port 8080}))
+(defn -main [& [port]]
+  (let [port (Integer. (or port (env :port) 5000))]
+    (run-server http-handler port)))
