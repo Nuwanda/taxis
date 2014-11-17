@@ -65,4 +65,4 @@
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))]
-    (run-server http-handler port)))
+    (run-server http-handler {:port port})))

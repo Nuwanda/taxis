@@ -25,9 +25,11 @@
 
   :uberjar-name "taxis.jar"
 
+  :main taxis.server
+
   :source-paths ["src/clj" "src/cljs"]
 
-  :cljsbuild { 
+  :cljsbuild {
               :builds [{:id "taxis"
                         :source-paths ["src/cljs"]
                         :compiler {
