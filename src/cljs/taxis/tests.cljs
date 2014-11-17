@@ -118,7 +118,7 @@
                            :type :taxi})
               (will-mount [_]
                           (go
-                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:8080/ws"))]
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "wss://taxi-sharing.herokuapp.com/ws"))]
                               (if error
                                 (js/alert "Error connecting server")
                                 (do
