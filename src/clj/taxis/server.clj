@@ -1,12 +1,15 @@
 (ns taxis.server
   (:import (java.util Date))
   (:use [org.httpkit.server :only [run-server]])
-  (:require [ring.middleware.reload :as reload]
+  (:require [environ.core :refer [env]]
+            [ring.middleware.reload :as reload]
             [compojure.handler :refer [site]]
             [compojure.core :as core :refer [GET POST defroutes]]
             [compojure.route :as route :refer [files not-found]]
             [chord.http-kit :refer [wrap-websocket-handler]]
             [clojure.core.async :refer [<! >! chan go-loop put!]]))
+
+(def is-dev? (env :is-dev))
 
 (def clients (atom {}))
 
@@ -54,6 +57,10 @@
            (files "/" {:root "."})
            (not-found "<h1><p>Page not found</p></h1>"))
 
+(def http-handler
+  (if is-dev?
+    (reload/wrap-reload (site #'all-routes))
+    (site routes)))
+
 (defn -main [& args]
-  (let [handler (reload/wrap-reload (site #'all-routes))]
-    (run-server handler {:port 8080})))
+  (run-server http-handler {:port 8080}))

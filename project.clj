@@ -14,10 +14,12 @@
                  [ring/ring-devel "1.1.8"]
                  [ring/ring-core "1.1.8"]
                  [http-kit "2.0.0"]
+                 [environ "1.0.0"]
                  ;;server/client ws over channels
                  [jarohen/chord "0.4.2" :exclusions [org.clojure/clojure]]]
 
-  :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
+  :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
+            [lein-environ "1.0.0"]]
 
   :min-lein-version "2.5.0"
 
@@ -35,7 +37,9 @@
                                    :output-dir "out"
                                    :optimizations :none
                                    :source-map true}}]}
-  :profiles {:uberjar {:hooks       [leiningen.cljsbuild]
+  :profiles {:dev     {:env         {:is-dev true}}
+             :uberjar {:hooks       [leiningen.cljsbuild]
+                       :env         {:production true}
                        :main        taxis.server
                        :aot         :all}})
 
