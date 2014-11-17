@@ -25,8 +25,6 @@
 
   :uberjar-name "taxis.jar"
 
-  :main "taxis.server"
-
   :source-paths ["src/clj" "src/cljs"]
 
   :cljsbuild { 
