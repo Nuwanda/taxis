@@ -114,8 +114,8 @@
 (defcomponent create-ride
               "Create ride first step: locations"
               [data owner {:keys [lat lon zoom] :or {lat 38.752739
-                                                                 lon -9.184769
-                                                                 zoom 14}}]
+                                                     lon -9.184769
+                                                     zoom 14}}]
               (init-state [_]
                           {:dir-rend    nil
                            :last-req    ""
@@ -196,7 +196,7 @@
     (every? (fn [checked?] checked?) (vals days))))
 
 (defn- toggle-all
-  "Turn all weekdays into the checked argument state"
+  "Turn all weekdays into the checked argument"
   [owner checked]
   (let [days (keys (om/get-state owner :weekdays))]
     (doseq [day days]

@@ -22,6 +22,8 @@
 
   :min-lein-version "2.0.0"
 
+  :uberjar-name "taxis.jar"
+
   :main "taxis.server"
 
   :source-paths ["src/clj"]

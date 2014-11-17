@@ -1,0 +1,1 @@
+web: java $JVM_OPTS -cp target/taxis.jar clojure.main -m taxis.server

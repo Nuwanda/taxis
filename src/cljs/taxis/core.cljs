@@ -22,7 +22,6 @@
                                  :lon -9.184769}}))
 
 ;;Routing
-
 (def history (History.))
 
 (defn on-navigate [event]

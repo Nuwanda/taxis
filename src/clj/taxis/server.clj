@@ -3,7 +3,7 @@
   (:use [org.httpkit.server :only [run-server]])
   (:require [ring.middleware.reload :as reload]
             [compojure.handler :refer [site]]
-            [compojure.core :as core :refer [GET defroutes]]
+            [compojure.core :as core :refer [GET POST defroutes]]
             [compojure.route :as route :refer [files not-found]]
             [clj-json.core :as json]
             [chord.http-kit :refer [wrap-websocket-handler]]
@@ -56,8 +56,7 @@
 (defroutes all-routes
            (GET "/ws" [] (-> ws-handler
                              (wrap-websocket-handler)))
-           (GET "/tests" [] (json-response "Hello World"))
-           (GET "/tests/:id" [id] (json-response (str "Hello World: " id)))
+           (POST "/oauth/:token" [token] (json-response (str "Hello World: " token)))
            (files "/" {:root "."})
            (not-found "<h1><p>Page not found</p></h1>"))
 
