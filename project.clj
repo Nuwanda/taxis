@@ -4,7 +4,7 @@
 
   :dependencies [[org.clojure/clojure "1.6.0"]
                  ;;Client dependencies
-                 [org.clojure/clojurescript "0.0-2342"]
+                 [org.clojure/clojurescript "0.0-2371" :scope "provided"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [om "0.7.3"]
                  [prismatic/om-tools "0.3.6" :exclusions [org.clojure/clojure]]
