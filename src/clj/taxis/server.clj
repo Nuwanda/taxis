@@ -7,7 +7,8 @@
             [compojure.core :as core :refer [GET POST defroutes]]
             [compojure.route :as route :refer [files not-found]]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            [clojure.core.async :refer [<! >! chan go-loop put!]]))
+            [clojure.core.async :refer [<! >! chan go-loop put!]])
+  (:gen-class :main true))
 
 (def is-dev? (env :is-dev))
 

@@ -9,7 +9,7 @@
             [taxis.ride :as ride]
             [cljs.core.async :refer [chan put! <!]]
             [chord.client :refer [ws-ch]]
-            [secretary.core :as secretary :include-macros true :refer [defroute]]
+            [secretary.core :as secretary :refer-macros [defroute]]
             [goog.history.EventType :as EventType]
             [goog.events :as events])
   (:import goog.History))
