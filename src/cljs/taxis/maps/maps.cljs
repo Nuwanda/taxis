@@ -211,7 +211,7 @@
                             (close! (:events-in data))
                             (close! (:events-out data)))
               (did-mount [_]
-                         (let [map-node (om/get-node owner)
+                         (let [map-node (om/get-node owner "map")
                                options #js {:center (google.maps.LatLng. lat lon)
                                             :zoom zoom
                                             :mapTypeId google.maps.MapTypeId.ROADMAP}]
@@ -220,4 +220,7 @@
                            (set! *in-chan* (:events-in data))
                            (event-loop data owner)))
               (render [_]
-                      (dom/div {:style {:height "550px"}})))
+                      (dom/div {:class "row"}
+                               (dom/div {:class "col-md-10 col-md-offset-1"}
+                                        (dom/div {:ref "map"
+                                                  :style {:height "550px"}})))))

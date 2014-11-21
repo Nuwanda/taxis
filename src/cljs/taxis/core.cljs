@@ -11,7 +11,7 @@
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary :refer-macros [defroute]]
             [goog.history.EventType :as EventType]
-            [goog.events :as events])
+            [goog.events :as gevents])
   (:import goog.History))
 
 (enable-console-print!)
@@ -28,7 +28,7 @@
   (secretary/dispatch! (.-token event)))
 
 (doto history
-  (goog.events/listen EventType/NAVIGATE on-navigate)
+  (gevents/listen EventType/NAVIGATE on-navigate)
   (.setEnabled true))
 
 (defcomponent placeholder [d o]
@@ -101,6 +101,7 @@
 
 
 ;;Om rendering
-(om/root tests/signin-buttons
+(om/root signin/login-button
          app-state
-         {:target (. js/document (getElementById "test-buttons"))})
+         {:target (. js/document (getElementById "test-buttons"))
+          :opts   {:client-id "28a417b037e936b3b9310b47530217ccc797236b"}})

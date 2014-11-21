@@ -5,6 +5,21 @@
             [goog.dom :as gdom]
             [secretary.core :as secretary]))
 
+(defn- authorize
+  "Authenticate user and prevent default a.href onclick event"
+  []
+  (.Login js/IDService)
+  false)
+
+(defcomponent login-button [data owner {:keys [client-id]}]
+              (will-mount [_]
+                          (let [init #js {:clientid client-id}]
+                            (.Init js/IDService init)))
+              (render [_]
+                      (dom/ul {:class "nav navbar-nav navbar-right"}
+                              (dom/li
+                                (dom/a {:href "#/login" :on-click authorize} "Sign in")))))
+
 (defn- submit [e]
   (.preventDefault e)
   (secretary/dispatch! "/"))

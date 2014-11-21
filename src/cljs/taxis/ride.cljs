@@ -134,7 +134,7 @@
               (render [_]
                       (dom/div {:class "row"}
                                (dom/h1 "Create Ride")
-                               (dom/div {:class "col-md-6"}
+                               (dom/div {:class "col-md-5 col-md-offset-1"}
                                         (dom/div {:role "form" :class "jumbotron"}
                                                  (dom/div {:class "form-group"}
                                                           (dom/label "Willing to drive?")
@@ -186,7 +186,7 @@
                                                  (dom/button {:class "btn btn-primary pull-right"
                                                               :on-click #(secretary/dispatch! "/ride/create/2")}
                                                              "Next")))
-                               (dom/div {:class "col-md-6"}
+                               (dom/div {:class "col-md-5"}
                                         (dom/div {:style {:height "350px"} :ref "map"})))))
 
 (defn- every-weekday?

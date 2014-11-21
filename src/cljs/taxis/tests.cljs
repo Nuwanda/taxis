@@ -3,7 +3,6 @@
   (:require [om.core :as om :include-macros true]
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
-            [taxis.maps :as maps :refer [map-view]]
             [cljs.core.async :refer [chan put! <! close!]]
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary]))
@@ -102,8 +101,8 @@
         lon  (get-in @data [:position :lon])
         rlat (rand-coord lat)
         rlon (rand-coord lon)]
-    (om/update! data [:position :lat] rlat)
     (om/update! data [:position :lon] rlon)
+    (om/update! data [:position :lat] rlat)
     (put! ich [:center {:lat rlat :lon rlon}])
     (put! sch {:data [:add-taxis  [{:taxi {:id  id
                                            :lat rlat
@@ -147,11 +146,3 @@
                           (dom/button {:class    "btn btn-primary"
                                        :on-click #(secretary/dispatch! "/taxi")}
                                       "Taxi")))))
-
-(defcomponent signin-buttons [data owner]
-              (render [_]
-                      (dom/ul {:class "nav navbar-nav navbar-right"}
-                              (dom/li
-                                (dom/button {:class "btn btn-primary"
-                                             :on-click #(secretary/dispatch! "/login")}
-                                            "Sign in")))))
