@@ -104,4 +104,4 @@
 (om/root signin/login-button
          app-state
          {:target (. js/document (getElementById "test-buttons"))
-          :opts   {:client-id "28a417b037e936b3b9310b47530217ccc797236b"}})
+          :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
