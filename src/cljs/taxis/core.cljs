@@ -3,7 +3,7 @@
   (:require [om.core :as om :include-macros true]
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
-            [taxis.maps :as maps :refer [map-view]]
+            [taxis.maps.main :as maps :refer [map-view]]
             [taxis.tests :as tests]
             [taxis.signin :as signin]
             [taxis.ride :as ride]

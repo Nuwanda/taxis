@@ -1,4 +1,4 @@
-(ns taxis.maps
+(ns taxis.maps.main
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [om.core :as om :include-macros true]
             [om-tools.dom :as dom :include-macros true]
