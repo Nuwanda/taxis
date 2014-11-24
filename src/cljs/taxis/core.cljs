@@ -18,8 +18,9 @@
 
 (def app-state (atom {:events-in  nil
                       :events-out nil
-                      :position {:lat 38.752739
-                                 :lon -9.184769}}))
+                      :position   {:lat 38.752739
+                                   :lon -9.184769}
+                      :logged     false}))
 
 ;;Routing
 (def history (History.))
@@ -36,6 +37,16 @@
                       (dom/div)))
 
 (defroute "/" {}
+          (do
+            (om/root signin/login-button
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))
+                      :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
+            (om/root placeholder
+                     nil
+                     {:target (. js/document (getElementById "app"))})))
+
+(defroute "/user" {}
           (do
             (om/root tests/role-buttons
                      app-state

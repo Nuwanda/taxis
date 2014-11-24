@@ -54,6 +54,7 @@ IdService.prototype.Login = function () {
         var timer = setInterval(function() {
             if (win.closed) {
                 clearInterval(timer);
+                location.reload();
             }
         }, 250);
     } else window.location.href = loginurl;
