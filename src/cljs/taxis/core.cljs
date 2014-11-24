@@ -36,13 +36,21 @@
               (render [_]
                       (dom/div)))
 
+(defcomponent home-placeholder [d o]
+              (render [_]
+                      (dom/h1 "Home")))
+
+(defcomponent user-placeholder [d o]
+              (render [_]
+                      (dom/h1 "User Home")))
+
 (defroute "/" {}
           (do
             (om/root signin/login-button
                      app-state
                      {:target (. js/document (getElementById "test-buttons"))
                       :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
-            (om/root placeholder
+            (om/root home-placeholder
                      nil
                      {:target (. js/document (getElementById "app"))})))
 
@@ -51,7 +59,7 @@
             (om/root tests/role-buttons
                      app-state
                      {:target (. js/document (getElementById "test-buttons"))})
-            (om/root placeholder
+            (om/root user-placeholder
                      nil
                      {:target (. js/document (getElementById "app"))})))
 
@@ -114,5 +122,8 @@
 ;;Om rendering
 (om/root signin/login-button
          app-state
-         {:target (. js/document (getElementById "test-buttons"))
+         {:target (. js/document (getElementById "login-button"))
           :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
+(om/root home-placeholder
+         nil
+         {:target (. js/document (getElementById "app"))})

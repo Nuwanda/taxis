@@ -8,16 +8,16 @@
             [cljs.core.async :refer [timeout <!]]))
 
 (defn- logoff
-  "Logoff the current user remotely and localy"
+  "Logoff the current user remotely and localy,
+  redirects to home"
   [data]
-  (.Logoff js/IDService)
-  (om/update! data :logged false))
+  (om/update! data :logged false)
+  (.Logoff js/IDService))
 
 (defn- authorize
-  "Authenticate user and prevent default a.href onclick event"
+  "Authenticate user"
   []
-  (.Login js/IDService)
-  false)
+  (.Login js/IDService))
 
 (defn- logged?
   "Checks the current login status"
@@ -29,7 +29,8 @@
       false)))
 
 (defn- update-login-status
-  "Update app-state according to the current login status"
+  "Update app-state according to the current login status,
+  also redirects to the main user page if logged"
   [data]
   (go-loop []
            (if (logged?)
@@ -50,8 +51,14 @@
                       (dom/ul {:class "nav navbar-nav navbar-right"}
                               (dom/li
                                 (if (:logged data)
-                                  (dom/a {:href "/" :on-click #(logoff data)} "Log Off")
-                                  (dom/a {:href "#/user" :on-click authorize} "Log in"))))))
+                                  (dom/a {:href "#" :on-click (fn []
+                                                                (logoff data)
+                                                                false)}
+                                         "Log Off")
+                                  (dom/a {:href "#" :on-click (fn []
+                                                                (authorize)
+                                                                false)}
+                                         "Log in"))))))
 
 (defn- submit [e]
   (.preventDefault e)

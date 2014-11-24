@@ -4,33 +4,28 @@
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
             [cljs.core.async :refer [put! <! chan timeout close!]]
-            [taxis.utils :as utils]
             [taxis.maps.directions :as directions]))
-
-
-(def *out-chan* nil)
-(def *in-chan* nil)
 
 (defn- handler
   "Handler for pickup request infowindow button, sends pickup request to the server"
   [id]
-  (put! *out-chan* {:pickup id}))
+  (put! (.-ochan js/window) {:pickup id}))
 
 (defn- accept-pu-handler
   []
   "Handler for accept button in pickup answer infowindow"
-  (put! *in-chan* [:pu-accept]))
+  (put! (.-ichan js/window) [:pu-accept]))
 
 (defn- reject-pu-handler
   "Handler for reject button in pickup answer infowindow"
   []
-  (put! *in-chan* [:pu-reject]))
+  (put! (.-ichan js/window) [:pu-reject]))
 
 (defn- create-content
   "Content string for pick up request infowindow"
   [id]
   (str "<div style=text-align:center;>"
-       (str "<button id=" "'window-button-" id "' class=" "'btn btn-primary'" "onClick=taxis.maps.handler(" id ")" ">" "Request Pick-Up" "</button>")
+       (str "<button id=" "'window-button-" id "' class=" "'btn btn-primary'" "onClick=taxis.maps.main.handler(" id ")" ">" "Request Pick-Up" "</button>")
        (str "</div>")))
 
 (defn- create-pu-content
@@ -38,8 +33,8 @@
   [id]
   (str "<div style=text-align:center ><h3>Pick-up Requested at this location</h3>"
        (str "<br/>")
-       (str "<button id=" "'y-pick-button-" id "' class=" "'btn btn-success'" "onClick=taxis.maps.accept_pu_handler() >" "Accept" "</button>"
-            (str "<button id=" "'n-pick-button-" id "' class=" "'btn btn-danger'" "onClick=taxis.maps.reject_pu_handler() >" "Reject" "</button>"
+       (str "<button id=" "'y-pick-button-" id "' class=" "'btn btn-success'" "onClick=taxis.maps.main.accept_pu_handler() >" "Accept" "</button>"
+            (str "<button id=" "'n-pick-button-" id "' class=" "'btn btn-danger'" "onClick=taxis.maps.main.reject_pu_handler() >" "Reject" "</button>"
                  (str "</div>")))))
 
 (defn- create-info
@@ -197,8 +192,8 @@
 (defcomponent map-view
               "Google Maps wrapper component"
               [data owner {:keys [lat lon zoom events-in] :or {lat 38.752739
-                                                            lon -9.184769
-                                                            zoom 14}}]
+                                                               lon -9.184769
+                                                               zoom 14}}]
               (init-state [_]
                           {:map nil
                            :pick-up {}
@@ -212,12 +207,12 @@
                             (close! (:events-out data)))
               (did-mount [_]
                          (let [map-node (om/get-node owner "map")
-                               options #js {:center (google.maps.LatLng. lat lon)
-                                            :zoom zoom
-                                            :mapTypeId google.maps.MapTypeId.ROADMAP}]
+                               options  #js {:center (google.maps.LatLng. lat lon)
+                                             :zoom zoom
+                                             :mapTypeId google.maps.MapTypeId.ROADMAP}]
                            (om/set-state! owner :map (google.maps.Map. map-node options))
-                           (set! *out-chan* (:events-out data))
-                           (set! *in-chan* (:events-in data))
+                           (set! (.-ochan js/window) (:events-out (deref (om/state data))))
+                           (set! (.-ichan js/window) (:events-in (deref (om/state data))))
                            (event-loop data owner)))
               (render [_]
                       (dom/div {:class "row"}

@@ -52,7 +52,7 @@
                            :type :pass})
               (will-mount [_]
                           (go
-                            (let [{:keys [ws-channel error]} (<! (ws-ch "wss://taxi-sharing.herokuapp.com/ws"))]
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:5000/ws"))]
                               (if error
                                 (js/alert "Error connecting server")
                                 (do
@@ -62,26 +62,32 @@
               (will-unmount [_]
                             (close! (om/get-state owner :server-chan)))
               (render-state [_ {:keys [server-chan id]}]
-                            (dom/ul {:class "nav navbar-nav navbar-right"}
+                            (dom/ul {:class "nav navbar-nav navbar-left"}
                                     (dom/li
-                                      (dom/button {:class "btn btn-primary"
-                                                   :on-click #(put! server-chan {:data [:center]
-                                                                                 :src id
-                                                                                 :type :pass
-                                                                                 :dest id})}
-                                                  "Center on me"))
+                                      (dom/a {:href ""
+                                              :on-click (fn []
+                                                          (put! server-chan {:data [:center]
+                                                                             :src  id
+                                                                             :type :pass
+                                                                             :dest id})
+                                                          false)}
+                                             "Center on me"))
                                     (dom/li
-                                      (dom/button {:class "btn btn-primary"
-                                                   :on-click #(put! server-chan {:data [:add-taxis (gen-taxis
-                                                                                                     (get-in @data [:position :lat])
-                                                                                                     (get-in @data [:position :lon]))]
-                                                                                 :src id
-                                                                                 :type :pass})}
-                                                  "Taxis"))
+                                      (dom/a {:href ""
+                                              :on-click (fn []
+                                                          (put! server-chan {:data [:add-taxis (gen-taxis
+                                                                                                 (get-in @data [:position :lat])
+                                                                                                 (get-in @data [:position :lon]))]
+                                                                             :src  id
+                                                                             :type :pass})
+                                                          false)}
+                                             "Taxis"))
                                     (dom/li
-                                      (dom/button {:class "btn btn-primary"
-                                                   :on-click #(secretary/dispatch! "/ride/create")}
-                                                  "Create a Ride")))))
+                                      (dom/a {:href ""
+                                              :on-click (fn []
+                                                          (secretary/dispatch! "/ride/create")
+                                                          false)}
+                                             "Create a Ride")))))
 
 (defn- set-location [data]
   (let [c (chan)]
@@ -117,7 +123,7 @@
                            :type :taxi})
               (will-mount [_]
                           (go
-                            (let [{:keys [ws-channel error]} (<! (ws-ch "wss://taxi-sharing.herokuapp.com/ws"))]
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:5000/ws"))]
                               (if error
                                 (js/alert "Error connecting server")
                                 (do
@@ -129,20 +135,26 @@
               (did-mount [_]
                          (set-location data))
               (render [_]
-                      (dom/ul {:class "nav navbar-nav navbar-right"}
+                      (dom/ul {:class "nav navbar-nav navbar-left"}
                               (dom/li
-                                (dom/button {:class "btn btn-primary"
-                                                   :on-click #(update-location data owner)}
-                                            "Update Position")))))
+                                (dom/a {:href ""
+                                        :on-click (fn []
+                                                    (update-location data owner)
+                                                    false)}
+                                       "Update Position")))))
 
 (defcomponent role-buttons [data owner]
               (render [_]
-                      (dom/ul {:class "nav navbar-nav navbar-right"}
+                      (dom/ul {:class "nav navbar-nav navbar-left"}
                         (dom/li
-                          (dom/button {:class    "btn btn-primary"
-                                       :on-click #(secretary/dispatch! "/pass")}
-                                      "Passenger"))
+                          (dom/a {:href ""
+                                  :on-click (fn []
+                                              (secretary/dispatch! "/pass")
+                                              false)}
+                                 "Passenger"))
                         (dom/li
-                          (dom/button {:class    "btn btn-primary"
-                                       :on-click #(secretary/dispatch! "/taxi")}
-                                      "Taxi")))))
+                          (dom/a {:href ""
+                                  :on-click (fn []
+                                              (secretary/dispatch! "/taxi")
+                                              false)}
+                                 "Taxi")))))
