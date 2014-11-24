@@ -14,7 +14,8 @@
 (defcomponent login-button [data owner {:keys [client-id]}]
               (will-mount [_]
                           (let [init #js {:clientid client-id}]
-                            (.Init js/IDService init)))
+                            (.Init js/IDService init)
+                            (.log js/console (.. js/IDService -access_token -status))))
               (render [_]
                       (dom/ul {:class "nav navbar-nav navbar-right"}
                               (dom/li
