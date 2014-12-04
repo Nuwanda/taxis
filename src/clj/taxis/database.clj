@@ -1,13 +1,28 @@
 (ns taxis.database
+  (:import (java.net URI))
   (:use [korma.db])
   (:use [korma.core])
   (:require [environ.core :refer [env]]
             [clojure.java.jdbc.deprecated :as sql]
             [clojure.java.jdbc :as new-sql]))
 
-(defdb dev-db (postgres {:db "taxis"
+(def is-dev? (env :is-dev))
+
+(def dev-db (postgres {:db "taxis"
                          :user "nuwanda"
                          :password ""}))
+
+(def prod-db
+  (let [db-uri (URI. (System/getenv "DATABASE_URL"))]
+    (->> (string/split (.getUserInfo db-uri) #":")
+         (#(identity {:db (last (string/split (System/getenv "DATABASE_URL") #"\/"))
+                      :host (.getHost db-uri)
+                      :port (.getPort db-uri)
+                      :user (% 0)
+                      :password (% 1)
+                      :ssl true
+                      :sslfactory "org.postgresql.ssl.NonValidatingFactory"}))
+         (postgres))))
 
 (def db-url (or (env :database-url)
                 "postgresql://localhost:5432/taxis"))
@@ -57,6 +72,9 @@
 
 (defn migrate
   []
+  (if is-dev?
+    (defdb db dev-db)
+    (defdb db prod-db))
   (if-not (migrated?)
     (do
       (println "Creating DB: ")
