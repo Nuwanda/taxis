@@ -9,12 +9,16 @@
 
 (def is-dev? (env :is-dev))
 
+(def db-url (or (env :database-url)
+                "postgresql://localhost:5432/taxis"))
+
 (def dev-db (postgres {:db "taxis"
                          :user "nuwanda"
                          :password ""}))
 
-(def prod-db
-  (let [db-uri (URI. (System/getenv "DATABASE_URL"))]
+(defn prod-db
+  []
+  (let [db-uri (URI. (env :database-url))]
     (->> (string/split (.getUserInfo db-uri) #":")
          (#(identity {:db (last (string/split (System/getenv "DATABASE_URL") #"\/"))
                       :host (.getHost db-uri)
@@ -24,9 +28,6 @@
                       :ssl true
                       :sslfactory "org.postgresql.ssl.NonValidatingFactory"}))
          (postgres))))
-
-(def db-url (or (env :database-url)
-                "postgresql://localhost:5432/taxis"))
 
 (defentity roles)
 (defentity users
@@ -75,7 +76,7 @@
   []
   (if is-dev?
     (defdb db dev-db)
-    (defdb db prod-db))
+    (defdb db (prod-db)))
   (if-not (migrated?)
     (do
       (println "Creating DB: ")
