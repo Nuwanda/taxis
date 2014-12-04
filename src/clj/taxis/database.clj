@@ -4,7 +4,8 @@
   (:use [korma.core])
   (:require [environ.core :refer [env]]
             [clojure.java.jdbc.deprecated :as sql]
-            [clojure.java.jdbc :as new-sql]))
+            [clojure.java.jdbc :as new-sql]
+            [clojure.string :as string]))
 
 (def is-dev? (env :is-dev))
 
