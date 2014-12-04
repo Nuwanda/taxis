@@ -103,7 +103,9 @@
 (defn- handle-input
   "Handle text input"
   [owner type event]
-  (om/set-state! owner [type :locality] (.. event -target -value)))
+  (om/set-state! owner
+                 [type :locality]
+                 (.. event -target -value)))
 
 (defn- select-text
   "Select the whole text on focus"

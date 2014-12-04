@@ -15,8 +15,10 @@
                  [ring/ring-core "1.1.8"]
                  [http-kit "2.0.0"]
                  [environ "1.0.0"]
-                 [org.clojure/java.jdbc "0.3.6"]
+                 ;;DB dependencies
+                 [korma "0.3.0"]
                  [postgresql "9.3-1102.jdbc41"]
+                 [org.clojure/java.jdbc "0.3.6"]
                  ;;server/client ws over channels
                  [jarohen/chord "0.4.2" :exclusions [org.clojure/clojure]]]
 

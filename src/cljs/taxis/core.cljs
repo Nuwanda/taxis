@@ -7,6 +7,7 @@
             [taxis.tests :as tests]
             [taxis.signin :as signin]
             [taxis.ride :as ride]
+            [taxis.payments :as payments]
             [cljs.core.async :refer [chan put! <!]]
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary :refer-macros [defroute]]
@@ -20,7 +21,24 @@
                       :events-out nil
                       :position   {:lat 38.752739
                                    :lon -9.184769}
-                      :logged     false}))
+                      :logged     false
+                      :ride       {:first-step  {:driving?    true
+                                                 :origin      {:lat nil :lon nil :marker nil :locality ""}
+                                                 :destination {:lat nil :lon nil :marker nil :locality ""}}
+                                   :second-step {:date       ""
+                                                 :time       ""
+                                                 :recurrent? false
+                                                 :weekdays   {:monday    false
+                                                              :tuesday   false
+                                                              :wednesday false
+                                                              :thursday  false
+                                                              :friday    false}
+                                                 :saturday   false
+                                                 :sunday     false}
+                                   :third-step  {:cash? false
+                                                 :seats 1
+                                                 :price 10
+                                                 :notes ""}}}))
 
 ;;Routing
 (def history (History.))
@@ -44,86 +62,52 @@
               (render [_]
                       (dom/h1 "User Home")))
 
+(defn- set-components
+  [nav main]
+  (do
+    (om/root nav
+             app-state
+             {:target (. js/document (getElementById "test-buttons"))})
+    (om/root main
+             app-state
+             {:target (. js/document (getElementById "app"))})))
+
 (defroute "/" {}
-          (do
-            (om/root signin/login-button
-                     app-state
-                     {:target (. js/document (getElementById "test-buttons"))
-                      :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
-            (om/root home-placeholder
-                     nil
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder home-placeholder))
 
 (defroute "/user" {}
-          (do
-            (om/root tests/role-buttons
-                     app-state
-                     {:target (. js/document (getElementById "test-buttons"))})
-            (om/root user-placeholder
-                     nil
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components tests/role-buttons user-placeholder))
 
 (defroute "/login" {}
-          (do
-            (om/root placeholder
-                     app-state
-                     {:target (. js/document (getElementById "test-buttons"))})
-            (om/root signin/signin-form
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder signin/signin-form))
 
 (defroute "/taxi" {}
-          (do
-            (om/root tests/taxi-buttons
-                     app-state
-                     {:target (. js/document (getElementById "test-buttons"))})
-            (om/root maps/map-view
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components tests/taxi-buttons maps/map-view))
 
 (defroute "/pass" {}
-          (do
-            (om/root tests/pass-buttons
-                     app-state
-                     {:target (. js/document (getElementById "test-buttons"))})
-            (om/root maps/map-view
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components tests/pass-buttons maps/map-view))
 
 (defroute "/ride/create" {}
-          (do
-            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
-            (om/root ride/create-ride
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder ride/create-ride))
 
 (defroute "/ride/create/2" {}
-          (do
-            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
-            (om/root ride/second-step
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder ride/second-step))
 
 (defroute "/ride/create/3" {}
-          (do
-            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
-            (om/root ride/final-step
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder ride/final-step))
 
 (defroute "/ride/create/done" {}
-          (do
-            (om/root placeholder nil {:target (. js/document (getElementById "test-buttons"))})
-            (om/root ride/ride-done
-                     app-state
-                     {:target (. js/document (getElementById "app"))})))
+          (set-components placeholder ride/ride-done))
 
 
 ;;Om rendering
-(om/root signin/login-button
+#_(om/root signin/login-button
          app-state
          {:target (. js/document (getElementById "login-button"))
           :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
-(om/root home-placeholder
+#_(om/root home-placeholder
+         nil
+         {:target (. js/document (getElementById "app"))})
+(om/root payments/pay-button
          nil
          {:target (. js/document (getElementById "app"))})

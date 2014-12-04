@@ -22,11 +22,10 @@
 (defn- logged?
   "Checks the current login status"
   []
-  (let [status (.. js/IDService -access_token -status)]
-    (.log js/console (str "Login status:" status))
-    (if (= status "connected")
-      true
-      false)))
+  (let [email  (.. js/IDService -basicinfo -Email)
+        connected? (not (nil? email))]
+    (.log js/console (str "Logged in: " connected?))
+    connected?))
 
 (defn- update-login-status
   "Update app-state according to the current login status,

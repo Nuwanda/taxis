@@ -7,7 +7,8 @@
             [compojure.core :as core :refer [GET POST defroutes]]
             [compojure.route :as route :refer [files not-found]]
             [chord.http-kit :refer [wrap-websocket-handler]]
-            [clojure.core.async :refer [<! >! chan go-loop put!]])
+            [clojure.core.async :refer [<! >! chan go-loop put!]]
+            [taxis.database :as db])
   (:gen-class :main true))
 
 (def is-dev? (env :is-dev))
@@ -64,5 +65,6 @@
     (site all-routes)))
 
 (defn -main [& [port]]
+  (db/migrate)
   (let [port (Integer. (or port (env :port) 5000))]
     (run-server http-handler {:port port})))
