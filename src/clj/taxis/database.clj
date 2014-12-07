@@ -32,6 +32,8 @@
 (defentity roles)
 (defentity users
            (belongs-to roles))
+(defentity rides
+           (belongs-to users))
 
 (defn- populate-db
   "Populate roles table"
@@ -41,10 +43,45 @@
             (values [{:name "taxi"}
                      {:name "passenger"}]))
     (insert users
-            (values [{:email "taxi@gmail.com" :roles_id 1}
-                     {:email "pass@gmail.com" :roles_id 2}]))))
+            (values [{:email "taxi@gmail.com" :roles_id 1 :rating 0 :numvotes 0}
+                     {:email "pass@gmail.com" :roles_id 2 :rating 0 :numvotes 0}]))))
 
-(defn migrated? []
+(defn get-user-by-email
+  "Return a user id for the given email"
+  [email]
+  (if-let [user (seq (select users
+                        (where {:email email})
+                        (fields :id)))]
+    (-> user first :id)
+    nil))
+
+(defn get-type-of-user
+  [email]
+  (if-let [role (seq (select users
+                             (where {:email email})
+                             (with roles)
+                             (fields [:roles.name :role])))]
+    (-> role first :role)
+    nil))
+
+(defn save-ride
+  "Save a ride to the database"
+  [user ride]
+  (let [user_id (get-user-by-email user)]
+    (insert rides
+            (values {:users_id user_id}))))
+
+(defn save-user
+  "Save a user to the database"
+  [email type]
+  (cond
+    (= type :taxi) (insert users
+                           (values [{:email email :roles_id 1 :rating 0 :numvotes 0}]))
+    (= type :pass) (insert users
+                           (values [{:email email :roles_id 2 :rating 0 :numvotes 0}]))
+    :else          nil))
+
+(defn- migrated? []
   (-> (new-sql/query
         db-url
         [(str "select count(*) from information_schema.tables "
@@ -63,8 +100,31 @@
       "users"
       [:id "SERIAL" "PRIMARY KEY"]
       [:email "TEXT" "NOT NULL"]
+      [:rating "NUMERIC" "NOT NULL"]
+      [:numvotes "NUMERIC" "NOT NULL"]
       [:roles_id "SERIAL" "REFERENCES roles(id)"])
-    (sql/do-commands "CREATE INDEX USERIDX ON users(email)")))
+    (sql/create-table
+      "rides"
+      [:id "SERIAL" "PRIMARY KEY"]
+      [:users_id "SERIAL" "REFERENCES users(id)"]
+      [:origin "TEXT" "NOT NULL"]
+      [:destination "TEXT" "NOT NULL"]
+      [:date "TEXT"]
+      [:time "TEXT" "NOT NULL"]
+      [:recurrent "BOOLEAN" "NOT NULL"]
+      [:monday "BOOLEAN"]
+      [:tuesday "BOOLEAN"]
+      [:wednesday "BOOLEAN"]
+      [:friday "BOOLEAN"]
+      [:saturday "BOOLEAN"]
+      [:sunday "BOOLEAN"]
+      [:cash "BOOLEAN"]
+      [:seats "SMALLINT"]
+      [:price "NUMERIC"]
+      [:notes "TEXT"])
+    (sql/do-commands "CREATE INDEX USERIDX ON users(email)")
+    (sql/do-commands "CREATE INDEX ORIGIDX ON rides(origin)")
+    (sql/do-commands "CREATE INDEX DESTIDX ON rides(destination)")))
 
 (defn- invoke-with-connection [f]
   (sql/with-connection

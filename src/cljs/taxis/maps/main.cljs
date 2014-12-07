@@ -25,7 +25,7 @@
   "Content string for pick up request infowindow"
   [id]
   (str "<div style=text-align:center;>"
-       (str "<button id=" "'window-button-" id "' class=" "'btn btn-primary'" "onClick=taxis.maps.main.handler(" id ")" ">" "Request Pick-Up" "</button>")
+       (str "<button" " class=" "'btn btn-primary'" "onClick=taxis.maps.main.handler(" "'" id "'" ")" ">" "Request Pick-Up" "</button>")
        (str "</div>")))
 
 (defn- create-pu-content
@@ -33,8 +33,8 @@
   [id]
   (str "<div style=text-align:center ><h3>Pick-up Requested at this location</h3>"
        (str "<br/>")
-       (str "<button id=" "'y-pick-button-" id "' class=" "'btn btn-success'" "onClick=taxis.maps.main.accept_pu_handler() >" "Accept" "</button>"
-            (str "<button id=" "'n-pick-button-" id "' class=" "'btn btn-danger'" "onClick=taxis.maps.main.reject_pu_handler() >" "Reject" "</button>"
+       (str "<button" " class=" "'btn btn-success'" "onClick=taxis.maps.main.accept_pu_handler() >" "Accept" "</button>"
+            (str "<button" " class=" "'btn btn-danger'" "onClick=taxis.maps.main.reject_pu_handler() >" "Reject" "</button>"
                  (str "</div>")))))
 
 (defn- create-info

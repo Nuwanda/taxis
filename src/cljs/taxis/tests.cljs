@@ -5,7 +5,8 @@
             [om-tools.core :refer-macros [defcomponent]]
             [cljs.core.async :refer [chan put! <! close!]]
             [chord.client :refer [ws-ch]]
-            [secretary.core :as secretary]))
+            [secretary.core :as secretary]
+            [taxis.signin :as signin]))
 
 (defn- rand-taxi [clat clon]
   (let [lat (+ clat (- (rand 0.04) 0.02))
@@ -22,7 +23,7 @@
 (defn- send-to-server [owner data]
   (let [out-ch (:events-out @data)
         srv-ch (om/get-state owner :server-chan)
-        src    (om/get-state owner :id)]
+        src    (:logged @data)]
     (go-loop []
              (if-let [[e v] (first (<! out-ch))]
                (let [lat (get-in @data [:position :lat])
@@ -40,15 +41,14 @@
              (do
                (if (:error msg)
                  (js/alert "Error communicating with server")
-                 (do
+                 (let [msg (:message msg)]
                    (print (str "Got: " msg))
-                   (put! (:events-in @data) (:message msg))))
+                   (put! (:events-in @data) msg)))
                (recur)))))
 
 (defcomponent pass-buttons [data owner]
               (init-state [_]
                           {:server-chan nil
-                           :id (rand-int 10)
                            :type :pass})
               (will-mount [_]
                           (go
@@ -61,33 +61,34 @@
                                   (send-to-server owner data))))))
               (will-unmount [_]
                             (close! (om/get-state owner :server-chan)))
-              (render-state [_ {:keys [server-chan id]}]
-                            (dom/ul {:class "nav navbar-nav navbar-left"}
-                                    (dom/li
-                                      (dom/a {:href ""
-                                              :on-click (fn []
-                                                          (put! server-chan {:data [:center]
-                                                                             :src  id
-                                                                             :type :pass
-                                                                             :dest id})
-                                                          false)}
-                                             "Center on me"))
-                                    (dom/li
-                                      (dom/a {:href ""
-                                              :on-click (fn []
-                                                          (put! server-chan {:data [:add-taxis (gen-taxis
-                                                                                                 (get-in @data [:position :lat])
-                                                                                                 (get-in @data [:position :lon]))]
-                                                                             :src  id
-                                                                             :type :pass})
-                                                          false)}
-                                             "Taxis"))
-                                    (dom/li
-                                      (dom/a {:href ""
-                                              :on-click (fn []
-                                                          (secretary/dispatch! "/ride/create")
-                                                          false)}
-                                             "Create a Ride")))))
+              (render-state [_ {:keys [server-chan]}]
+                            (let [id (:logged data)]
+                              (dom/ul {:class "nav navbar-nav navbar-left"}
+                                      (dom/li
+                                        (dom/a {:href     ""
+                                                :on-click (fn []
+                                                            (put! server-chan {:data [:center]
+                                                                               :src  id
+                                                                               :type :pass
+                                                                               :dest id})
+                                                            false)}
+                                               "Center on me"))
+                                      (dom/li
+                                        (dom/a {:href     ""
+                                                :on-click (fn []
+                                                            (put! server-chan {:data [:add-taxis (gen-taxis
+                                                                                                   (get-in @data [:position :lat])
+                                                                                                   (get-in @data [:position :lon]))]
+                                                                               :src  id
+                                                                               :type :pass})
+                                                            false)}
+                                               "Taxis"))
+                                      (dom/li
+                                        (dom/a {:href     ""
+                                                :on-click (fn []
+                                                            (secretary/dispatch! "/ride/create")
+                                                            false)}
+                                               "Create a Ride"))))))
 
 (defn- set-location [data]
   (let [c (chan)]
@@ -102,7 +103,7 @@
 (defn- update-location [data owner]
   (let [sch  (om/get-state owner :server-chan)
         ich  (:events-in @data)
-        id   (om/get-state owner :id)
+        id   (:logged @data)
         lat  (get-in @data [:position :lat])
         lon  (get-in @data [:position :lon])
         rlat (rand-coord lat)
@@ -119,7 +120,6 @@
 (defcomponent taxi-buttons [data owner]
               (init-state [_]
                           {:server-chan nil
-                           :id (rand-int 10)
                            :type :taxi})
               (will-mount [_]
                           (go
@@ -143,18 +143,36 @@
                                                     false)}
                                        "Update Position")))))
 
+(defn- receive-registration
+  [data owner]
+  (go-loop []
+           (if-let [msg (<! (om/get-state owner :server-chan))]
+             (do
+               (if (:error msg)
+                 (js/alert "Error communicating with server")
+                 (let [msg (:message msg)]
+                   (print (str "Got: " msg))
+                   (if (:registered msg)
+                     (signin/handle-registration data msg)
+                     (.log js/console "Unexpected message"))))
+               (recur)))))
+
 (defcomponent role-buttons [data owner]
+              (init-state [_]
+                          {:server-chan nil})
+              (will-mount [_]
+                          (go
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:5000/ws"))]
+                              (if error
+                                (js/alert "Error connecting server")
+                                (do
+                                  (om/set-state! owner :server-chan ws-channel)
+                                  (receive-registration data owner)
+                                  (put! ws-channel {:src  (:logged @data)
+                                                    :type :placeholder
+                                                    :data :registered?
+                                                    :dest (:logged @data)}))))))
+              (will-unmount [_]
+                            (close! (om/get-state owner :server-chan)))
               (render [_]
-                      (dom/ul {:class "nav navbar-nav navbar-left"}
-                        (dom/li
-                          (dom/a {:href ""
-                                  :on-click (fn []
-                                              (secretary/dispatch! "/pass")
-                                              false)}
-                                 "Passenger"))
-                        (dom/li
-                          (dom/a {:href ""
-                                  :on-click (fn []
-                                              (secretary/dispatch! "/taxi")
-                                              false)}
-                                 "Taxi")))))
+                      (dom/div)))

@@ -9,6 +9,9 @@
                  [om "0.7.3"]
                  [prismatic/om-tools "0.3.6" :exclusions [org.clojure/clojure]]
                  [secretary "1.2.1"]
+                 ;;Cljs REPL
+                 [com.cemerick/piggieback "0.1.3"]
+                 [weasel "0.4.0-SNAPSHOT"]
                  ;;Server dependencies
                  [compojure "1.1.5"]
                  [ring/ring-devel "1.1.8"]
@@ -41,7 +44,9 @@
                                    :output-dir "out"
                                    :optimizations :none
                                    :source-map true}}]}
-  :profiles {:dev     {:env         {:is-dev true}}
+  :profiles {:dev     {:repl-options {:init-ns taxis.server
+                                      :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+                       :env         {:is-dev true}}
              :uberjar {:hooks       [leiningen.cljsbuild]
                        :env         {:production true}
                        :main        taxis.server

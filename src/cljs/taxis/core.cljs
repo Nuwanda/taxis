@@ -12,16 +12,20 @@
             [chord.client :refer [ws-ch]]
             [secretary.core :as secretary :refer-macros [defroute]]
             [goog.history.EventType :as EventType]
-            [goog.events :as gevents])
+            [goog.events :as gevents]
+            [weasel.repl :as weasel])
   (:import goog.History))
 
 (enable-console-print!)
+(weasel/connect "ws://localhost:9001" :verbose true)
 
 (def app-state (atom {:events-in  nil
                       :events-out nil
                       :position   {:lat 38.752739
                                    :lon -9.184769}
                       :logged     false
+                      :taxi?      false
+                      :registering? false
                       :ride       {:first-step  {:driving?    true
                                                  :origin      {:lat nil :lon nil :marker nil :locality ""}
                                                  :destination {:lat nil :lon nil :marker nil :locality ""}}
@@ -78,8 +82,8 @@
 (defroute "/user" {}
           (set-components tests/role-buttons user-placeholder))
 
-(defroute "/login" {}
-          (set-components placeholder signin/signin-form))
+(defroute "/register" {}
+          (set-components tests/role-buttons signin/signin-form))
 
 (defroute "/taxi" {}
           (set-components tests/taxi-buttons maps/map-view))
@@ -88,26 +92,27 @@
           (set-components tests/pass-buttons maps/map-view))
 
 (defroute "/ride/create" {}
-          (set-components placeholder ride/create-ride))
+          (set-components tests/pass-buttons ride/create-ride))
 
 (defroute "/ride/create/2" {}
-          (set-components placeholder ride/second-step))
+          (set-components tests/pass-buttons ride/second-step))
 
 (defroute "/ride/create/3" {}
-          (set-components placeholder ride/final-step))
+          (set-components tests/pass-buttons ride/final-step))
 
 (defroute "/ride/create/done" {}
-          (set-components placeholder ride/ride-done))
+          (set-components tests/pass-buttons ride/ride-done))
 
 
 ;;Om rendering
-#_(om/root signin/login-button
+#_(secretary/dispatch! "/ride/create")
+(om/root signin/login-button
          app-state
          {:target (. js/document (getElementById "login-button"))
           :opts   {:client-id "dc21cc7bed16712733bb1b653618a1c4737ba13c"}})
-#_(om/root home-placeholder
+(om/root home-placeholder
          nil
          {:target (. js/document (getElementById "app"))})
-(om/root payments/pay-button
+#_(om/root payments/pay-button
          nil
          {:target (. js/document (getElementById "app"))})

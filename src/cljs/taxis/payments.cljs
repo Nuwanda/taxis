@@ -66,7 +66,7 @@
   "Create a payment of the given ammount"
   [amount]
   (go
-    (let [[status data] (<! (<api-request :create-payment  #js {:amount amount :currency "USD"}))]
+    (let [[status data] (<! (<api-request :create-payment  #js {:amount amount :currency "EUR"}))]
       (cond
         (= status :success) (do
                               (.log js/console (str "Successly created a payment"))

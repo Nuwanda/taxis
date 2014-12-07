@@ -35,11 +35,11 @@
 
 (defn- create-marker
   "Returns a marker for the origin/destination"
-  ([owner {:keys [lat lon] :as coords} type]
+  ([data owner {:keys [lat lon] :as coords} type]
    (when coords
      (let [pos (google.maps.LatLng. lat lon)
            map (om/get-state owner :map)
-           marker (om/get-state owner [type :marker])]
+           marker (get-in @data [:ride :first-step type :marker])]
        (if marker
          (do
            (.setPosition marker pos)
@@ -49,8 +49,9 @@
            (.setMap marker map)
            marker))))))
 
-(defn- display-route [owner start end]
+(defn- display-route
   "Requests route and displays it, creates a DirectionsRender object if one doesn't exist already"
+  [owner start end]
   (go
     (let [dirs (<! (directions/request-directions start end))]
       (if-let [dr (om/get-state owner :dir-rend)]
@@ -65,47 +66,47 @@
 
 (defn- try-route
   "Tries to create a route if origin and destination are both set"
-  [owner]
-  (let [origin (om/get-state owner :origin)
-        dest   (om/get-state owner :destination)]
+  [data owner]
+  (let [origin (get-in @data [:ride :first-step :origin])
+        dest   (get-in @data [:ride :first-step :destination])]
     (when (and (:marker origin) (:marker dest))
       (display-route owner origin dest))))
 
 (defn- position-to-current
   "Set origin/destination to user's current location"
-  [owner type]
+  [data owner type]
   (let [ctr (om/get-state owner :center)]
     (go
       (let [lat      (:lat ctr)
             lon      (:lon ctr)
-            marker   (create-marker owner ctr type)
+            marker   (create-marker data owner ctr type)
             locality (<! (geo/geocode lat lon))
             point    {:lat lat :lon lon :marker marker :locality locality}]
-        (om/set-state! owner type point)
-        (try-route owner)))))
+        (om/update! data [:ride :first-step type] point)
+        (try-route data owner)))))
 
 (defn- position-by-input
   "Set origin/destination using the text box input"
-  [owner type]
-  (let [locality (om/get-state owner [type :locality])
+  [data owner type]
+  (let [locality (get-in @data [:ride :first-step type :locality])
         last-req (om/get-state owner :last-req)]
     (when (not (blank? locality))
       (when (not (= locality last-req))
         (go
           (let [{:keys [address lat lon] :as res} (<! (geo/geocode locality))
-                marker (create-marker owner res type)
+                marker (create-marker data owner res type)
                 point {:lat lat :lon lon :marker marker :locality address}]
             (om/set-state! owner :last-req locality)
             (pan-map owner lat lon)
-            (om/set-state! owner type point)
-            (try-route owner)))))))
+            (om/update! data [:ride :first-step type] point)
+            (try-route data owner)))))))
 
 (defn- handle-input
   "Handle text input"
-  [owner type event]
-  (om/set-state! owner
-                 [type :locality]
-                 (.. event -target -value)))
+  [data type event]
+  (om/update! data
+              [:ride :first-step type :locality]
+              (.. event -target -value)))
 
 (defn- select-text
   "Select the whole text on focus"
@@ -121,18 +122,16 @@
               (init-state [_]
                           {:dir-rend    nil
                            :last-req    ""
-                           :driving?    true
                            :map         nil
-                           :center      {:lat lat :lon lon}
-                           :origin      {:lat nil :lon nil :marker nil :locality ""}
-                           :destination {:lat nil :lon nil :marker nil :locality ""}})
+                           :center      {:lat lat :lon lon}})
               (did-mount [_]
                          (let [map-node (om/get-node owner "map")
                                options #js {:center (google.maps.LatLng. lat lon)
                                             :zoom zoom
                                             :mapTypeId google.maps.MapTypeId.ROADMAP}]
                            (om/set-state! owner :map (google.maps.Map. map-node options))
-                           (center-map owner)))
+                           (center-map owner)
+                           (.log js/console )))
               (render [_]
                       (dom/div {:class "row"}
                                (dom/h1 "Create Ride")
@@ -143,15 +142,15 @@
                                                           (dom/div {:class "btn-group btn-group-justified"}
                                                                    (dom/div {:class "btn-group"}
                                                                             (dom/button {:class     (str "btn btn-default "
-                                                                                                         (util/active (om/get-state owner :driving?)))
+                                                                                                         (util/active (get-in data [:ride :first-step :driving?])))
                                                                                          :type      "button"
-                                                                                         :on-click #(om/set-state! owner :driving? true)}
+                                                                                         :on-click #(om/update! data [:ride :first-step :driving?] true)}
                                                                                          "Yes"))
                                                                    (dom/div {:class "btn-group"}
                                                                             (dom/button {:class     (str "btn btn-default "
-                                                                                                         (util/active (not (om/get-state owner :driving?))))
+                                                                                                         (util/active (not (get-in data [:ride :first-step :driving?]))))
                                                                                          :type      "button"
-                                                                                         :on-click #(om/set-state! owner :driving? false)}
+                                                                                         :on-click #(om/update! data [:ride :first-step :driving?] false)}
                                                                                         "No"))))
                                                  (dom/div {:class "form-group"}
                                                           (dom/label "Starting from: ")
@@ -159,15 +158,15 @@
                                                                    (dom/input {:class       "form-control"
                                                                                :type        "text"
                                                                                :placeholder "Origin"
-                                                                               :value       (om/get-state owner [:origin :locality])
-                                                                               :on-change   #(handle-input owner :origin %)
-                                                                               :on-blur     #(position-by-input owner :origin)
+                                                                               :value       (get-in data [:ride :first-step :origin :locality])
+                                                                               :on-change   #(handle-input data :origin %)
+                                                                               :on-blur     #(position-by-input data owner :origin)
                                                                                :on-focus    #(select-text owner "orig")
                                                                                :on-mouse-up #(.preventDefault %)
                                                                                :ref         "orig"}
                                                                               (dom/span {:class "input-group-btn"}
                                                                                         (dom/button {:class    "btn btn-default"
-                                                                                                     :on-click #(position-to-current owner :origin)}
+                                                                                                     :on-click #(position-to-current data owner :origin)}
                                                                                                     "Current")))))
                                                  (dom/div {:class "form-group"}
                                                           (dom/label "Going to: ")
@@ -175,15 +174,15 @@
                                                                    (dom/input {:class       "form-control"
                                                                                :type        "text"
                                                                                :placeholder "Destination"
-                                                                               :value       (om/get-state owner [:destination :locality])
-                                                                               :on-change   #(handle-input owner :destination %)
-                                                                               :on-blur     #(position-by-input owner :destination)
+                                                                               :value       (get-in data [:ride :first-step :destination :locality])
+                                                                               :on-change   #(handle-input data :destination %)
+                                                                               :on-blur     #(position-by-input data owner :destination)
                                                                                :on-focus    #(select-text owner "dest")
                                                                                :on-mouse-up #(.preventDefault %)
                                                                                :ref         "dest"}
                                                                               (dom/span {:class "input-group-btn"}
                                                                                         (dom/button {:class    "btn btn-default"
-                                                                                                     :on-click #(position-to-current owner :destination)}
+                                                                                                     :on-click #(position-to-current data owner :destination)}
                                                                                                     "Current")))))
                                                  (dom/button {:class "btn btn-primary pull-right"
                                                               :on-click #(secretary/dispatch! "/ride/create/2")}
@@ -193,39 +192,39 @@
 
 (defn- every-weekday?
   "True if every weekday is checked"
-  [owner]
-  (let [days (om/get-state owner :weekdays)]
+  [data]
+  (let [days (get-in data [:ride :second-step :weekdays])]
     (every? (fn [checked?] checked?) (vals days))))
 
 (defn- toggle-all
   "Turn all weekdays into the checked argument"
-  [owner checked]
-  (let [days (keys (om/get-state owner :weekdays))]
+  [data checked]
+  (let [days (keys (get-in @data [:ride :second-step :weekdays]))]
     (doseq [day days]
-      (om/set-state! owner [:weekdays day] checked))))
+      (om/update! data [:ride :second-step :weekdays day] checked))))
 
 (defn- toggle-weekdays
   "Toggle every weekday"
-  [owner]
-  (if (every-weekday? owner)
-    (toggle-all owner false)
-    (toggle-all owner true)))
+  [data]
+  (if (every-weekday? @data)
+    (toggle-all data false)
+    (toggle-all data true)))
 
 (defn- toggle-item
   "Toggle the selected day"
-  [owner day]
+  [data day]
   (cond
-    (= day :weekdays) (toggle-weekdays owner)
-    (= day :saturday) (om/update-state! owner :saturday not)
-    (= day :sunday)   (om/update-state! owner :sunday not)
-    :else             (om/update-state! owner [:weekdays day] not)))
+    (= day :weekdays) (toggle-weekdays data)
+    (= day :saturday) (om/transact! data [:ride :second-step :saturday] not)
+    (= day :sunday)   (om/transact! data [:ride :second-step :sunday] not)
+    :else             (om/transact! data [:ride :second-step :weekdays day] not)))
 
 (defn- get-time
   "Set component state based on TimePicker value"
-  [owner]
+  [data]
   (let [picker (.pickatime (js/$ ".timepicker") "picker")
         time   (.get picker "value")]
-    (om/set-state! owner :time time)))
+    (om/update! data [:ride :second-step :time] time)))
 
 (defn- pick-time
   "Opens de TimePicker so that an hour can be selected"
@@ -235,10 +234,10 @@
 
 (defn- get-date
   "Set component state based on DatePicker value"
-  [owner]
+  [data]
   (let [picker (.pickadate (js/$ ".datepicker") "picker")
         date   (.get picker "value")]
-    (om/set-state! owner :date date)))
+    (om/update! data [:ride :second-step :date] date)))
 
 (defn- pick-date
   "Opens de DatePicker so that a date can be selected"
@@ -249,17 +248,6 @@
 (defcomponent second-step
               "Create ride second step: time and day"
               [data owner]
-              (init-state [_]
-                          {:date       ""
-                           :time       ""
-                           :recurrent? false
-                           :weekdays   {:monday    false
-                                        :tuesday   false
-                                        :wednesday false
-                                        :thursday  false
-                                        :friday    false}
-                           :saturday   false
-                           :sunday     false})
               (will-mount [_]
                           (let [link1 (gdom/createElement "script")
                                 link2 (gdom/createElement "script")
@@ -306,88 +294,92 @@
                                                           (dom/div {:class "btn-group btn-group-justified"}
                                                                    (dom/div {:class "btn-group"}
                                                                             (dom/button {:class     (str "btn btn-default "
-                                                                                                         (util/active (om/get-state owner :recurrent?)))
+                                                                                                         (util/active (get-in data [:ride :second-step :recurrent?])))
                                                                                          :type      "button"
-                                                                                         :on-click #(om/set-state! owner :recurrent? true)}
+                                                                                         :on-click #(om/update! data [:ride :second-step :recurrent?] true)}
                                                                                         "Yes"))
                                                                    (dom/div {:class "btn-group"}
                                                                             (dom/button {:class     (str "btn btn-default "
-                                                                                                         (util/active (not (om/get-state owner :recurrent?))))
+                                                                                                         (util/active (not (get-in data [:ride :second-step :recurrent?]))))
                                                                                          :type      "button"
-                                                                                         :on-click #(om/set-state! owner :recurrent? false)}
+                                                                                         :on-click #(om/update! data [:ride :second-step :recurrent?] false)}
                                                                                         "No"))))
                                                  (dom/div {:class "form-group"
-                                                           :style {:display (util/display (not (om/get-state owner :recurrent?)))}}
+                                                           :style {:display (util/display (not (get-in data [:ride :second-step :recurrent?])))}}
                                                           (dom/label "Pick a day: ")
                                                           (dom/input {:class       "datepicker pull-right"
                                                                       :type        "text"
                                                                       :placeholder "Date"
                                                                       :on-focus    pick-date
-                                                                      :on-blur     #(get-date owner)}))
+                                                                      :on-blur     #(get-date data)}))
                                                  (dom/div {:class "form-group"}
                                                           (dom/label "Pick a time of day: ")
                                                           (dom/input {:class       "timepicker pull-right"
                                                                       :type        "text"
                                                                       :placeholder "Time"
                                                                       :on-focus    pick-time
-                                                                      :on-blur     #(get-time owner)}))
+                                                                      :on-blur     #(get-time data)}))
                                                  (dom/div {:class "form-group"
-                                                           :style {:display (util/display (om/get-state owner :recurrent?))}}
+                                                           :style {:display (util/display (get-in data [:ride :second-step :recurrent?]))}}
                                                           (dom/label "Which days?")
                                                           (dom/ul {:class "list-group"}
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :weekdays)}
+                                                                           :on-click #(toggle-item data :weekdays)}
                                                                           "Every Weekday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
-                                                                                     :style {:display (util/display (every-weekday? owner))}}))
+                                                                                     :style {:display (util/display (every-weekday? data))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :monday)}
+                                                                           :on-click #(toggle-item data :monday)}
                                                                           "Monday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner [:weekdays :monday]))}}))
+                                                                                                        (get-in data [:ride :second-step :weekdays :monday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :tuesday)}
+                                                                           :on-click #(toggle-item data :tuesday)}
                                                                           "Tuesday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner [:weekdays :tuesday]))}}))
+                                                                                                        (get-in data [:ride :second-step :weekdays :tuesday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :wednesday)}
+                                                                           :on-click #(toggle-item data :wednesday)}
                                                                           "Wednesday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner [:weekdays :wednesday]))}}))
+                                                                                                        (get-in data [:ride :second-step :weekdays :wednesday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :thursday)}
+                                                                           :on-click #(toggle-item data :thursday)}
                                                                           "Thursday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner [:weekdays :thursday]))}}))
+                                                                                                        (get-in data [:ride :second-step :weekdays :thursday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :friday)}
+                                                                           :on-click #(toggle-item data :friday)}
                                                                           "Friday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner [:weekdays :friday]))}}))
+                                                                                                        (get-in data [:ride :second-step :weekdays :friday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :saturday)}
+                                                                           :on-click #(toggle-item data :saturday)}
                                                                           "Saturday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner :saturday))}}))
+                                                                                                        (get-in data [:ride :second-step :saturday]))}}))
                                                                   (dom/li {:class "list-group-item"
-                                                                           :on-click #(toggle-item owner :sunday)}
+                                                                           :on-click #(toggle-item data :sunday)}
                                                                           "Sunday"
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
-                                                                                                        (om/get-state owner :sunday))}}))))
+                                                                                                        (get-in data [:ride :second-step :sunday]))}}))))
                                                  (dom/button {:class    "btn btn-primary pull-left"
                                                               :on-click #(secretary/dispatch! "/ride/create")}
                                                              "Previous")
-                                                 (dom/button {:class    "btn btn-primary pull-right"
+                                                 (if (get-in data [:ride :first-step :driving?])
+                                                   (dom/button {:class    "btn btn-primary pull-right"
                                                               :on-click #(secretary/dispatch! "/ride/create/3")}
-                                                             "Next"))))))
+                                                             "Next")
+                                                   (dom/button {:class "btn btn-primary pull-right"
+                                                                :on-click #(secretary/dispatch! "/ride/create/done")}
+                                                               "Finish")))))))
 
 (defn- handle-notes-input
   "Handle notes/info text input"

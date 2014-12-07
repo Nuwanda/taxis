@@ -1,11 +1,13 @@
 (ns taxis.signin
-  (:require-macros [cljs.core.async.macros :refer [go-loop]])
+  (:require-macros [cljs.core.async.macros :refer [go-loop go]])
   (:require [om.core :as om :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
             [om-tools.dom :as dom :include-macros true]
             [goog.dom :as gdom]
             [secretary.core :as secretary]
-            [cljs.core.async :refer [timeout <!]]))
+            [cljs.core.async :refer [timeout <! put! close!]]
+            [chord.client :refer [ws-ch]]
+            [taxis.utils :as util]))
 
 (defn- logoff
   "Logoff the current user remotely and localy,
@@ -34,7 +36,7 @@
   (go-loop []
            (if (logged?)
              (do
-               (om/update! data :logged true)
+               (om/update! data :logged (.. js/IDService -basicinfo -Email))
                (secretary/dispatch! "/user"))
              (do
                (<! (timeout 200))
@@ -59,29 +61,72 @@
                                                                 false)}
                                          "Log in"))))))
 
-(defn- submit [e]
-  (.preventDefault e)
-  (secretary/dispatch! "/"))
+(defn handle-registration [data {:keys [registered]}]
+  (let [registering? (:registering? @data)]
+    (.log js/console (str "Registering?: " registering? ", registered: " registered))
+    (cond
+      (= registered :unregistered) (when-not registering? (secretary/dispatch! "/register"))
+      (= registered :taxi) (do (om/update! data :taxi? true) (secretary/dispatch! "/taxi"))
+      (= registered :pass) (do (om/update! data :taxi? false) (secretary/dispatch! "/pass")))))
+
+(defn- submit [data owner e]
+  (let [srv-chan (om/get-state owner :server-chan)
+        src      (:logged @data)
+        taxi?    (:taxi? @data)]
+    (if taxi?
+      (put! srv-chan {:src src
+                      :type :taxi
+                      :data :register
+                      :dest src})
+      (put! srv-chan {:src src
+                      :type :pass
+                      :data :register
+                      :dest src}))
+    (go
+      (let [answer (<! srv-chan)]
+        (.log js/console (str "Got message: " answer))
+        (if (= (:message answer) :ok)
+          (if taxi?
+            (secretary/dispatch! "/taxi")
+            (secretary/dispatch! "/pass"))
+          (js/alert "Error registering user on server")))))
+  (.preventDefault e))
 
 (defcomponent signin-form [data owner]
+              (init-state [_]
+                          {:server-chan nil})
               (will-mount [_]
-                          (let [link (gdom/createElement "link")
-                                head (aget (gdom/getElementsByTagNameAndClass "head") 0)]
-                            (doto link
-                              (.setAttribute "href" "/public/css/signin.css")
-                              (.setAttribute "type" "text/css")
-                              (.setAttribute "rel" "stylesheet"))
-                            (.appendChild head link)))
+                          (om/update! data :registering? true)
+                          (go
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:5000/ws"))]
+                              (if error
+                                (js/alert "Error connecting server")
+                                (om/set-state! owner :server-chan ws-channel)))))
+              (will-unmount [_]
+                            (clo0se! (om/get-state owner :server-chan)))
               (render [_]
                       (dom/div {:class "row"}
-                               (dom/div {:class "col-md-4 col-md-offset-4"
+                               (dom/div {:class "col-md-6 col-md-offset-3"
                                          :style {:text-align "center"}}
                                         (dom/form {:role "form" :class "form-signin"}
-                                                  (dom/h2 "Please Sign In")
-                                                  (dom/input  {:type "email" :placeholder "Email address" :class "form-control"})
-                                                  (dom/input  {:type "password" :placeholder "Password" :class "form-control"})
+                                                  (dom/h2 "Welcome to Taxi Sharing")
+                                                  (dom/div {:class "jumbotron"}
+                                                           (dom/p "This is your first time using our services, do you which to register as a taxi?")
+                                                           (dom/div {:class "btn-group btn-group-justified"}
+                                                                    (dom/div {:class "btn-group"}
+                                                                             (dom/button {:class    (str "btn btn-default "
+                                                                                                         (util/active (:taxi? data)))
+                                                                                          :type     "button"
+                                                                                          :on-click #(om/update! data :taxi? true)}
+                                                                                         "Yes"))
+                                                                    (dom/div {:class "btn-group"}
+                                                                             (dom/button {:class    (str "btn btn-default "
+                                                                                                          (util/active (not (:taxi? data))))
+                                                                                          :type     "button"
+                                                                                          :on-click #(om/update! data :taxi? false)}
+                                                                                         "No"))))
                                                   (dom/button {:class "btn btn-primary"
                                                                :type "submit"
                                                                :style {:margin-top "2px"}
-                                                               :on-click submit}
+                                                               :on-click #(submit data owner %)}
                                                               "Sign In"))))))
