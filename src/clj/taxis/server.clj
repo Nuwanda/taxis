@@ -27,6 +27,7 @@
     :unregistered))
 
 (defn- store-channel [id ch type]
+  (println (str "Saving channell for user: " id ", of type: " type))
   (when-not (contains? (get @clients type) id)
     (swap! clients assoc-in [type id] ch)))
 
@@ -36,6 +37,33 @@
   (if (db/save-user email type)
     (put! ans-ch :ok)
     (put! ans-ch {:error "Couldn't create user"})))
+
+(defn- save-ride
+  [user ride ans-ch]
+  (println (str "Creating ride for user: " user))
+  (if (db/save-ride user ride)
+    (put! ans-ch :ok)
+    (put! ans-ch {:error "Couldn't save ride to database"})))
+
+(defmulti get-rides (fn [user ans-ch type] type))
+
+(defmethod get-rides :all
+  [user ans-ch _]
+  (if-let [rides (db/get-all-rides user)]
+    (put! ans-ch rides)
+    (put! ans-ch :no-rides)))
+
+(defmethod get-rides :mine
+  [user ans-ch _]
+  (if-let [rides (db/get-rides-of-user user)]
+    (put! ans-ch rides)
+    (put! ans-ch :no-rides)))
+
+(defn- join-ride
+  [ride user ans-ch]
+  (if-let [ride (db/user-join-ride user ride)]
+    (put! ans-ch {:ok ride})
+    (put! ans-ch {:error "Couldn't update ride in database"})))
 
 (defn- remove-channel [channel]
   (prn (str "Connected clients: " @clients))
@@ -64,15 +92,24 @@
   (if (or (nil? type) (nil? src))
     (prn (str "Got poorly formatted message: " msg))
     (let [{:keys [data dest]} msg]
-      (when-not (= data :registered?)
-        (store-channel src ws-ch type))
       (if (nil? data)
         (prn (str "Got poorly formatted message: " msg))
         (if (= data :register)
           (register-user src type ws-ch)
-          (if dest
-            (send-message data dest ws-ch src)
-            (broadcast-message data)))))))
+          (if (:ride data)
+            (save-ride src (:ride data) ws-ch)
+            (if (= data :get-rides)
+              (get-rides src ws-ch :mine)
+              (if (= data :all-rides)
+                (get-rides src ws-ch :all)
+                (if (:join-ride data)
+                  (join-ride (get-in data [:join-ride :id]) src ws-ch)
+                  (do
+                    (when-not (= data :registered?)
+                      (store-channel src ws-ch type))
+                    (if dest
+                      (send-message data dest ws-ch src)
+                      (broadcast-message data))))))))))))
 
 (defn ws-handler [{:keys [ws-channel]}]
   (go-loop []
@@ -89,7 +126,6 @@
 (defroutes all-routes
            (GET "/ws" [] (-> ws-handler
                              (wrap-websocket-handler)))
-           (POST "/oauth/:token" [token] (str "Hello World: " token))
            (files "/" {:root "."})
            (not-found "<h1><p>Page not found</p></h1>"))
 

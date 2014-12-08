@@ -1,4 +1,4 @@
-(ns taxis.ride
+(ns taxis.rides.create
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [om.core :as om :include-macros true]
             [om-tools.dom :as dom :include-macros true]
@@ -10,7 +10,8 @@
             [clojure.string :refer [blank?]]
             [goog.dom :as gdom]
             [goog.math.Integer :as gint]
-            [secretary.core :as secretary]))
+            [secretary.core :as secretary]
+            [chord.client :refer [ws-ch]]))
 
 (defn- pan-map
   "Pans map to given coordinates"
@@ -383,20 +384,20 @@
 
 (defn- handle-notes-input
   "Handle notes/info text input"
-  [owner event]
-  (om/set-state! owner :notes (.. event -target -value)))
+  [data event]
+  (om/update! data [:ride :third-step :notes] (.. event -target -value)))
 
 (defn- handle-numeric-input
   "Validate and handle seat input"
-  [owner state {:keys [min max]} event]
+  [data state {:keys [min max]} event]
   (let [val     (.. event -target -value)
-        old     (om/get-state owner state)]
+        old     (get-in @data [:ride :third-step state])]
     (if (re-find #"^\d+$" val)
       (let [new (gint/fromString val)]
         (if (and (< new max) (>= new min))
-          (om/set-state! owner state new)
-          (om/set-state! owner state old)))
-      (om/set-state! owner state old))))
+          (om/update! data [:ride :third-step state] (.toInt new))
+          (om/update! data [:ride :third-step state] old)))
+      (om/update! data [:ride :third-step state] old))))
 
 (defcomponent final-step
               "Create ride final step: vacant seats and ride price"
@@ -406,71 +407,145 @@
                            :seats 1
                            :price 10
                            :notes ""})
-              (render-state [_ {:keys [cash? seats price notes]}]
-                            (dom/div {:class "row"}
-                                     (dom/h1 "Create Ride")
-                                     (dom/div {:class "col-md-6 col-md-offset-3"}
-                                              (dom/div {:role "form" :class "jumbotron"}
-                                                       (dom/div {:class "form-group"}
-                                                                (dom/label "Do you accept online payment?")
-                                                                (dom/div {:class "btn-group btn-group-justified"}
-                                                                         (dom/div {:class "btn-group"}
-                                                                                  (dom/button {:class    (str "btn btn-default "
-                                                                                                              (util/active cash?))
-                                                                                               :type     "button"
-                                                                                               :on-click #(om/set-state! owner :cash? true)}
-                                                                                              "Cash only"))
-                                                                         (dom/div {:class "btn-group"}
-                                                                                  (dom/button {:class    (str "btn btn-default "
-                                                                                                              (util/active (not cash?)))
-                                                                                               :type     "button"
-                                                                                               :on-click #(om/set-state! owner :cash? false)}
-                                                                                              "Accept online"))))
-                                                       (dom/div {:class "form-group"}
-                                                                (dom/label "Contribution asked for: ")
-                                                                (dom/div {:class "input-group"}
-                                                                         (dom/span {:class "input-group-addon"} "€")
-                                                                         (dom/input {:class       "form-control pull-right"
-                                                                                     :type        "text"
-                                                                                     :ref         "price"
-                                                                                     :value       price
-                                                                                     :on-change   #(handle-numeric-input owner :price {:min 1 :max 9999} %)
-                                                                                     :on-focus    #(select-text owner "price")
-                                                                                     :on-mouse-up #(.preventDefault %)
-                                                                                     :style       {:text-align "right"}})
-                                                                         (dom/span {:class "input-group-addon"} ".00")))
-                                                       (dom/div {:class "form-group"}
-                                                                (dom/label "Number of vacant seats: ")
-                                                                (dom/input {:class       "pull-right"
-                                                                            :type        "number"
-                                                                            :min         "1"
-                                                                            :max         "8"
-                                                                            :ref         "seats"
-                                                                            :value       seats
-                                                                            :on-change   #(handle-numeric-input owner :seats {:min 1 :max 9} %)
-                                                                            :on-focus    #(select-text owner "seats")
-                                                                            :on-mouse-up #(.preventDefault %)
-                                                                            :style       {:min-width "50px"}}))
-                                                       (dom/div {:class "form-group"}
-                                                                (dom/label "Additional notes/info : ")
-                                                                (dom/textarea {:class "form-control"
-                                                                               :rows  "5"
-                                                                               :on-change #(handle-notes-input owner %)
-                                                                               :value notes}))
-                                                       (dom/button {:class    "btn btn-primary pull-left"
-                                                                    :on-click #(secretary/dispatch! "/ride/create/2")}
-                                                                   "Previous")
-                                                       (dom/button {:class "btn btn-primary pull-right"
-                                                                    :on-click #(secretary/dispatch! "/ride/create/done")}
-                                                                   "Finish"))))))
+              (render [_]
+                      (dom/div {:class "row"}
+                               (dom/h1 "Create Ride")
+                               (dom/div {:class "col-md-6 col-md-offset-3"}
+                                        (dom/div {:role "form" :class "jumbotron"}
+                                                 (dom/div {:class "form-group"}
+                                                          (dom/label "Do you accept online payment?")
+                                                          (dom/div {:class "btn-group btn-group-justified"}
+                                                                   (dom/div {:class "btn-group"}
+                                                                            (dom/button {:class    (str "btn btn-default "
+                                                                                                        (util/active (get-in data [:ride :third-step :cash?])))
+                                                                                         :type     "button"
+                                                                                         :on-click #(om/update! data [:ride :third-step :cash?] true)}
+                                                                                        "Cash only"))
+                                                                   (dom/div {:class "btn-group"}
+                                                                            (dom/button {:class    (str "btn btn-default "
+                                                                                                        (util/active (not (get-in data [:ride :third-step :cash?]))))
+                                                                                         :type     "button"
+                                                                                         :on-click #(om/update! data [:ride :third-step :cash?] false)}
+                                                                                        "Accept online"))))
+                                                 (dom/div {:class "form-group"}
+                                                          (dom/label "Contribution asked for: ")
+                                                          (dom/div {:class "input-group"}
+                                                                   (dom/span {:class "input-group-addon"} "€")
+                                                                   (dom/input {:class       "form-control pull-right"
+                                                                               :type        "text"
+                                                                               :ref         "price"
+                                                                               :value       (get-in data [:ride :third-step :price])
+                                                                               :on-change   #(handle-numeric-input data :price {:min 1 :max 9999} %)
+                                                                               :on-focus    #(select-text owner "price")
+                                                                               :on-mouse-up #(.preventDefault %)
+                                                                               :style       {:text-align "right"}})
+                                                                   (dom/span {:class "input-group-addon"} ".00")))
+                                                 (dom/div {:class "form-group"}
+                                                          (dom/label "Number of vacant seats: ")
+                                                          (dom/input {:class       "pull-right"
+                                                                      :type        "number"
+                                                                      :min         "1"
+                                                                      :max         "8"
+                                                                      :ref         "seats"
+                                                                      :value       (get-in data [:ride :third-step :seats])
+                                                                      :on-change   #(handle-numeric-input data :seats {:min 1 :max 9} %)
+                                                                      :on-focus    #(select-text owner "seats")
+                                                                      :on-mouse-up #(.preventDefault %)
+                                                                      :style       {:min-width "50px"}}))
+                                                 (dom/div {:class "form-group"}
+                                                          (dom/label "Additional notes/info : ")
+                                                          (dom/textarea {:class "form-control"
+                                                                         :rows  "5"
+                                                                         :on-change #(handle-notes-input data %)
+                                                                         :value (get-in data [:ride :third-step :notes])}))
+                                                 (dom/button {:class    "btn btn-primary pull-left"
+                                                              :on-click #(secretary/dispatch! "/ride/create/2")}
+                                                             "Previous")
+                                                 (dom/button {:class "btn btn-primary pull-right"
+                                                              :on-click #(secretary/dispatch! "/ride/create/done")}
+                                                             "Finish"))))))
+
+(defn- serialize-ride
+  "Prepare ride info for database serialization"
+  [ride]
+  (.log js/console (get-in ride [:third-step :notes]))
+  {:origin      (get-in ride [:first-step :origin :locality])
+   :destination (get-in ride [:first-step :destination :locality])
+   :driving     (get-in ride [:first-step :driving?])
+   :date        (get-in ride [:second-step :date])
+   :time        (get-in ride [:second-step :time])
+   :recurrent   (get-in ride [:second-step :recurrent?])
+   :monday      (get-in ride [:second-step :weekdays :monday])
+   :tuesday     (get-in ride [:second-step :weekdays :tuesday])
+   :wednesday   (get-in ride [:second-step :weekdays :wednesday])
+   :thursday    (get-in ride [:second-step :weekdays :thursday])
+   :friday      (get-in ride [:second-step :weekdays :friday])
+   :saturday    (get-in ride [:second-step :saturday])
+   :sunday      (get-in ride [:second-step :sunday])
+   :cash        (get-in ride [:third-step :cash?])
+   :seats       (get-in ride [:third-step :seats])
+   :price       (get-in ride [:third-step :price])
+   :notes       (get-in ride [:third-step :notes])})
+
+(defn- send-ride
+  "Send ride to server and clear local ride"
+  [data owner]
+  (let [ws-ch (om/get-state owner :server-chan)
+        src   (:logged @data)
+        ride  (serialize-ride (:ride @data))]
+    (put! ws-ch {:src  src
+                 :data {:ride ride}
+                 :dest src
+                 :type :placeholder})
+    (go
+      (let [answer (<! ws-ch)]
+        (.log js/console (str "Got message: " answer))
+        (if (= (:message answer) :ok)
+          (om/set-state! owner :success? true)
+          (om/set-state! owner :failure? true))))
+    (om/update! data :ride {:first-step  {:driving?    true
+                                          :origin      {:lat nil :lon nil :marker nil :locality ""}
+                                          :destination {:lat nil :lon nil :marker nil :locality ""}}
+                            :second-step {:date       ""
+                                          :time       ""
+                                          :recurrent? false
+                                          :weekdays   {:monday    false
+                                                       :tuesday   false
+                                                       :wednesday false
+                                                       :thursday  false
+                                                       :friday    false}
+                                          :saturday   false
+                                          :sunday     false}
+                            :third-step  {:cash? false
+                                          :seats 1
+                                          :price 10
+                                          :notes ""}})))
 
 (defcomponent ride-done
               "Ride created message"
               [data owner]
-              (render [_]
+              (init-state [_]
+                          {:server-chan nil
+                           :success?    false
+                           :failure?    false})
+              (will-mount [_]
+                          (go
+                            (let [{:keys [ws-channel error]} (<! (ws-ch "ws://localhost:5000/ws"))]
+                              (if error
+                                (js/alert "Error connecting server")
+                                (do
+                                  (om/set-state! owner :server-chan ws-channel)
+                                  (send-ride data owner))))))
+              (render-state [_ {:keys [success? failure?]}]
                       (dom/div {:class "row"}
                                (dom/div {:class "col-md-10 col-md-offset-1"}
-                                        (dom/div {:class "alert alert-success"
-                                                  :role  "alert"
-                                                  :style {:text-align "center"}}
-                                                 (dom/h3 "Ride successfully created!"))))))
+                                        (when success?
+                                          (dom/div {:class "alert alert-success"
+                                                    :role  "alert"
+                                                    :style {:text-align "center"}}
+                                                   (dom/h3 "Ride successfully created!")))
+                                        (when failure?
+                                          (dom/div {:class "alert alert-danger"
+                                                    :role  "alert"
+                                                    :style {:text-align "center"}}
+                                                   (dom/h3 "Error creating the ride!")))))))

@@ -6,7 +6,9 @@
             [taxis.maps.main :as maps :refer [map-view]]
             [taxis.tests :as tests]
             [taxis.signin :as signin]
-            [taxis.ride :as ride]
+            [taxis.rides.create :as ride-create]
+            [taxis.rides.list :as ride-list]
+            [taxis.rides.join :as ride-join]
             [taxis.payments :as payments]
             [cljs.core.async :refer [chan put! <!]]
             [chord.client :refer [ws-ch]]
@@ -19,30 +21,30 @@
 (enable-console-print!)
 (weasel/connect "ws://localhost:9001" :verbose true)
 
-(def app-state (atom {:events-in  nil
-                      :events-out nil
-                      :position   {:lat 38.752739
-                                   :lon -9.184769}
-                      :logged     false
-                      :taxi?      false
+(def app-state (atom {:events-in    nil
+                      :events-out   nil
+                      :position     {:lat 38.752739
+                                     :lon -9.184769}
+                      :logged       false
+                      :taxi?        false
                       :registering? false
-                      :ride       {:first-step  {:driving?    true
-                                                 :origin      {:lat nil :lon nil :marker nil :locality ""}
-                                                 :destination {:lat nil :lon nil :marker nil :locality ""}}
-                                   :second-step {:date       ""
-                                                 :time       ""
-                                                 :recurrent? false
-                                                 :weekdays   {:monday    false
-                                                              :tuesday   false
-                                                              :wednesday false
-                                                              :thursday  false
-                                                              :friday    false}
-                                                 :saturday   false
-                                                 :sunday     false}
-                                   :third-step  {:cash? false
-                                                 :seats 1
-                                                 :price 10
-                                                 :notes ""}}}))
+                      :ride         {:first-step  {:driving?    true
+                                                   :origin      {:lat nil :lon nil :marker nil :locality ""}
+                                                   :destination {:lat nil :lon nil :marker nil :locality ""}}
+                                     :second-step {:date       ""
+                                                   :time       ""
+                                                   :recurrent? false
+                                                   :weekdays   {:monday    false
+                                                                :tuesday   false
+                                                                :wednesday false
+                                                                :thursday  false
+                                                                :friday    false}
+                                                   :saturday   false
+                                                   :sunday     false}
+                                     :third-step  {:cash? false
+                                                   :seats 1
+                                                   :price 10
+                                                   :notes ""}}}))
 
 ;;Routing
 (def history (History.))
@@ -69,15 +71,38 @@
 (defn- set-components
   [nav main]
   (do
-    (om/root nav
-             app-state
-             {:target (. js/document (getElementById "test-buttons"))})
-    (om/root main
-             app-state
-             {:target (. js/document (getElementById "app"))})))
+    (when nav
+      (do
+        (om/detach-root (. js/document (getElementById "test-buttons")))
+        (om/root nav
+                 app-state
+                 {:target (. js/document (getElementById "test-buttons"))})))
+    (when main
+      (do
+        (om/detach-root (. js/document (getElementById "app")))
+        (om/root main
+                 app-state
+                 {:target (. js/document (getElementById "app"))})))))
 
 (defroute "/" {}
           (set-components placeholder home-placeholder))
+
+(defroute "/ride/list" {}
+          (set-components placeholder ride-list/all-rides))
+
+(defroute "/ride/list/mine" {}
+          (set-components placeholder ride-list/my-rides))
+
+(defroute "/ride/join/:id" [id]
+          (do
+            (om/root placeholder
+                     nil
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-join/join
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :opts {:id id}})))
 
 (defroute "/user" {}
           (set-components tests/role-buttons user-placeholder))
@@ -92,16 +117,16 @@
           (set-components tests/pass-buttons maps/map-view))
 
 (defroute "/ride/create" {}
-          (set-components tests/pass-buttons ride/create-ride))
+          (set-components placeholder ride-create/create-ride))
 
 (defroute "/ride/create/2" {}
-          (set-components tests/pass-buttons ride/second-step))
+          (set-components placeholder ride-create/second-step))
 
 (defroute "/ride/create/3" {}
-          (set-components tests/pass-buttons ride/final-step))
+          (set-components placeholder ride-create/final-step))
 
 (defroute "/ride/create/done" {}
-          (set-components tests/pass-buttons ride/ride-done))
+          (set-components placeholder ride-create/ride-done))
 
 
 ;;Om rendering

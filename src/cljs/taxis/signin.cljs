@@ -103,7 +103,8 @@
                                 (js/alert "Error connecting server")
                                 (om/set-state! owner :server-chan ws-channel)))))
               (will-unmount [_]
-                            (clo0se! (om/get-state owner :server-chan)))
+                            (when (om/get-state owner :server-chan)
+                              (close! (om/get-state owner :server-chan))))
               (render [_]
                       (dom/div {:class "row"}
                                (dom/div {:class "col-md-6 col-md-offset-3"

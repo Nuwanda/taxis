@@ -62,6 +62,12 @@
                               (.log js/console (str "Error getting balance"))
                               (set! js/window.resp data))))))
 
+(defn confirm-payment
+  [id]
+  (let [url (str base-url "/payment/confirm/" id
+                 "?success_url=http%3A%2F%2Flocalhost%3A5000&return_url=http%3A%2F%2Flocalhost%3A5000")]
+    (set! js/window.location url)))
+
 (defn create-payment
   "Create a payment of the given ammount"
   [amount]
@@ -70,10 +76,10 @@
       (cond
         (= status :success) (do
                               (.log js/console (str "Successly created a payment"))
-                              (set! js/window.resp data))
+                               [:ok (.-id data)])
         (= status :error)   (do
                               (.log js/console (str "Error creating payment"))
-                              (set! js/window.resp data))))))
+                              [:error (.-message data)])))))
 
 (defcomponent pay-button
               "Payment Service test button"

@@ -29,6 +29,7 @@
                (let [lat (get-in @data [:position :lat])
                      lon (get-in @data [:position :lon])]
                  (cond
+                   (= e :get-rides) (.log js/console "Want rides!")
                    (= e :pickup) (put! srv-ch {:type :pass :src src :dest v :data [:pickup {:src src :lat lat :lon lon}]})
                    (= e :pu-accept) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-accepted {:src src}]})
                    (= e :pu-reject) (put! srv-ch {:type :taxi :src src :dest v :data [:pu-rejected {:src src}]})
@@ -60,7 +61,8 @@
                                   (receive-from-server owner data)
                                   (send-to-server owner data))))))
               (will-unmount [_]
-                            (close! (om/get-state owner :server-chan)))
+                            (when (om/get-state owner :server-chan)
+                              (close! (om/get-state owner :server-chan))))
               (render-state [_ {:keys [server-chan]}]
                             (let [id (:logged data)]
                               (dom/ul {:class "nav navbar-nav navbar-left"}
@@ -76,19 +78,21 @@
                                       (dom/li
                                         (dom/a {:href     ""
                                                 :on-click (fn []
-                                                            (put! server-chan {:data [:add-taxis (gen-taxis
-                                                                                                   (get-in @data [:position :lat])
-                                                                                                   (get-in @data [:position :lon]))]
-                                                                               :src  id
-                                                                               :type :pass})
+                                                            (secretary/dispatch! "/ride/create")
                                                             false)}
-                                               "Taxis"))
+                                               "Create a Ride"))
                                       (dom/li
                                         (dom/a {:href     ""
                                                 :on-click (fn []
-                                                            (secretary/dispatch! "/ride/create")
+                                                            (secretary/dispatch! "/ride/list")
                                                             false)}
-                                               "Create a Ride"))))))
+                                               "Find Rides"))
+                                      (dom/li
+                                        (dom/a {:href     ""
+                                                :on-click (fn []
+                                                            (secretary/dispatch! "/ride/list/mine")
+                                                            false)}
+                                               "My Rides"))))))
 
 (defn- set-location [data]
   (let [c (chan)]
@@ -131,7 +135,8 @@
                                   (receive-from-server owner data)
                                   (send-to-server owner data))))))
               (will-unmount [_]
-                            (close! (om/get-state owner :server-chan)))
+                            (when (om/get-state owner :server-chan)
+                              (close! (om/get-state owner :server-chan))))
               (did-mount [_]
                          (set-location data))
               (render [_]
@@ -173,6 +178,7 @@
                                                     :data :registered?
                                                     :dest (:logged @data)}))))))
               (will-unmount [_]
-                            (close! (om/get-state owner :server-chan)))
+                            (when (om/get-state owner :server-chan)
+                              (close! (om/get-state owner :server-chan))))
               (render [_]
                       (dom/div)))
