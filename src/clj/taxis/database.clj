@@ -74,7 +74,8 @@
             (with rides
                   (with users
                         (fields :email :rating :numvotes)))
-            (where {:users_id user})))))
+            (where (and {:users_id user}
+                        (raw "date > CURRENT_DATE")))))))
 
 (defn get-past-rides
   [email]
