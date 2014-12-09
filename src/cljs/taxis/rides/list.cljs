@@ -72,7 +72,7 @@
                       (dom/tr
                         (dom/td (:email data))
                         (dom/td (if (> (:numvotes data) 0)
-                                  (str (:rating data) "/10")
+                                  (str (:rating data) "/5")
                                   "N/A"))
                         (dom/td (:origin data))
                         (dom/td (:destination data))
@@ -107,7 +107,7 @@
                             (dom/tr
                               (dom/td (:email data))
                               (dom/td (if (> (:numvotes data) 0)
-                                        (str (:rating data) "/10")
+                                        (str (:rating data) "/5")
                                         "N/A"))
                               (dom/td (:origin data))
                               (dom/td (:destination data))
@@ -159,7 +159,7 @@
                       (dom/tr
                         (dom/td (:email data))
                         (dom/td (if (> (:numvotes data) 0)
-                                  (str (:rating data) "/10")
+                                  (str (:rating data) "/5")
                                   "N/A"))
                         (dom/td (:origin data))
                         (dom/td (:destination data))

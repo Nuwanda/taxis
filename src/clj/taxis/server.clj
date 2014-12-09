@@ -27,9 +27,10 @@
     :unregistered))
 
 (defn- store-channel [id ch type]
-  (println (str "Saving channell for user: " id ", of type: " type))
-  (when-not (contains? (get @clients type) id)
-    (swap! clients assoc-in [type id] ch)))
+  (when-not (= type :unregistered)
+    (println (str "Saving channell for user: " id ", of type: " type))
+    (when-not (contains? (get @clients type) id)
+      (swap! clients assoc-in [type id] ch))))
 
 (defn- register-user
   [email type ans-ch]
@@ -115,12 +116,14 @@
 
 (defn- send-message [msg dest src-channel src-email]
   (if (= msg :registered?)
-    (put! src-channel {:registered (client-registration src-email)})
-    (if-let [tx-c (get-in @clients [:taxi dest])]
-      (put! tx-c msg)
-      (if-let [ps-c (get-in @clients [:pass dest])]
-        (put! ps-c msg)
-        (put! src-channel {:error "Destination ws not found on server"})))))
+         (let [type (client-registration src-email)]
+           (store-channel src-email src-channel type)
+           (put! src-channel {:registered type}))
+         (if-let [tx-c (get-in @clients [:taxi dest])]
+           (put! tx-c msg)
+           (if-let [ps-c (get-in @clients [:pass dest])]
+             (put! ps-c msg)
+             (put! src-channel {:error "Destination ws not found on server"})))))
 
 (defn- broadcast-message [msg]
   (doseq [[_ ch] (:pass @clients)]
@@ -132,32 +135,34 @@
     (let [{:keys [data dest]} msg]
       (if (nil? data)
         (prn (str "Got poorly formatted message: " msg))
-        (if (= data :register)
-          (register-user src type ws-ch)
-          (if (:ride data)
-            (save-ride src (:ride data) ws-ch)
-            (if (= data :get-rides)
-              (get-rides src ws-ch :mine)
-              (if (= data :all-rides)
-                (get-rides src ws-ch :all)
-                (if (= data :past-rides)
-                  (get-rides src ws-ch :past)
-                  (if (= data :joined-rides)
-                    (get-rides src ws-ch :joined)
-                    (if (:join-ride data)
-                      (join-ride (get-in data [:join-ride :id]) src ws-ch)
-                      (if (:leave-ride data)
-                        (leave-ride (get-in data [:leave-ride :id]) src ws-ch)
-                        (if (:del-ride data)
-                          (delete-ride (:del-ride data) ws-ch)
-                          (if (:rate-ride data)
-                            (rate-ride (get-in data [:rate-ride :id]) (get-in data [:rate-ride :rating]) ws-ch)
-                            (do
-                              (when-not (= data :registered?)
-                                (store-channel src ws-ch type))
-                              (if dest
-                                (send-message data dest ws-ch src)
-                                (broadcast-message data)))))))))))))))))
+        (if (= data :start)
+          (store-channel src ws-ch type)
+          (if (= data :register)
+            (register-user src type ws-ch)
+            (if (:ride data)
+              (save-ride src (:ride data) ws-ch)
+              (if (= data :get-rides)
+                (get-rides src ws-ch :mine)
+                (if (= data :all-rides)
+                  (get-rides src ws-ch :all)
+                  (if (= data :past-rides)
+                    (get-rides src ws-ch :past)
+                    (if (= data :joined-rides)
+                      (get-rides src ws-ch :joined)
+                      (if (:join-ride data)
+                        (join-ride (get-in data [:join-ride :id]) src ws-ch)
+                        (if (:leave-ride data)
+                          (leave-ride (get-in data [:leave-ride :id]) src ws-ch)
+                          (if (:del-ride data)
+                            (delete-ride (:del-ride data) ws-ch)
+                            (if (:rate-ride data)
+                              (rate-ride (get-in data [:rate-ride :id]) (get-in data [:rate-ride :rating]) ws-ch)
+                              (do
+                                (when-not (= data :registered?)
+                                  (store-channel src ws-ch type))
+                                (if dest
+                                  (send-message data dest ws-ch src)
+                                  (broadcast-message data))))))))))))))))))
 
 (defn ws-handler [{:keys [ws-channel]}]
   (go-loop []

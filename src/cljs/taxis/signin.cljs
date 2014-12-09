@@ -110,7 +110,7 @@
                                (dom/div {:class "col-md-6 col-md-offset-3"
                                          :style {:text-align "center"}}
                                         (dom/form {:role "form" :class "form-signin"}
-                                                  (dom/h2 "Welcome to Taxi Sharing")
+                                                  (dom/h2 (str "Welcome to TaxiSharing " (.-Name js/IDService.basicinfo)))
                                                   (dom/div {:class "jumbotron"}
                                                            (dom/p "This is your first time using our services, do you which to register as a taxi?")
                                                            (dom/div {:class "btn-group btn-group-justified"}

@@ -24,6 +24,10 @@
   (let [out-ch (:events-out @data)
         srv-ch (om/get-state owner :server-chan)
         src    (:logged @data)]
+    (put! srv-ch {:src  (:logged @data)
+                  :type (if (:taxi? @data) :taxi :pass)
+                  :data :start
+                  :dest (:logged @data)})
     (go-loop []
              (if-let [[e v] (first (<! out-ch))]
                (let [lat (get-in @data [:position :lat])
@@ -193,17 +197,16 @@
 
 (defn- receive-registration
   [data owner]
-  (go-loop []
-           (if-let [msg (<! (om/get-state owner :server-chan))]
-             (do
-               (if (:error msg)
-                 (js/alert "Error communicating with server")
-                 (let [msg (:message msg)]
-                   (print (str "Got: " msg))
-                   (if (:registered msg)
-                     (signin/handle-registration data msg)
-                     (.log js/console "Unexpected message"))))
-               (recur)))))
+  (go []
+      (if-let [msg (<! (om/get-state owner :server-chan))]
+        (do
+          (if (:error msg)
+            (js/alert "Error communicating with server")
+            (let [msg (:message msg)]
+              (print (str "Got: " msg))
+              (if (:registered msg)
+                (signin/handle-registration data msg)
+                (.log js/console "Unexpected message"))))))))
 
 (defcomponent role-buttons [data owner]
               (init-state [_]
