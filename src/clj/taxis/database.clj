@@ -67,24 +67,34 @@
     (-> role first :role)
     nil))
 
+(defn get-joined-rides
+  [email]
+  (let [user (get-user-by-email email)]
+    (seq (select joinedrides
+            (with rides
+                  (with users
+                        (fields :email :rating :numvotes)))
+            (where {:users_id user})))))
+
+(defn get-past-rides
+  [email]
+  (let [user (get-user-by-email email)]
+    (seq (select joinedrides
+                 (with rides
+                       (with users
+                             (fields :email :rating :numvotes)))
+                 (where (and {:users_id user}
+                             {:rated false}
+                             (raw "rides.date < CURRENT_DATE")))))))
+
 (defn get-rides-of-user
   [email]
   (let [user (get-user-by-email email)]
-    (seq (union
-           (queries
-             (subselect rides
-                        (where {:users_id user})
-                        (fields :notes :date :monday :friday :seats :destination :recurrent
-                                :thursday :cash :wednesday :sunday :saturday :time
-                                :tuesday :price :id :origin))
-             #_(subselect joinedrides
-                        (with rides)
-                        (where {:users_id user})
-                        (fields :rides.notes :rides.date :rides.monday :rides.friday :rides.seats :rides.destination :rides.recurrent
-                                :rides.thursday :rides.cash :rides.wednesday :rides.sunday :rides.saturday :rides.time
-                                :rides.tuesday :rides.price :rides.id :rides.origin)))))))
+    (seq (select rides
+                      (where {:users_id user})))))
 
 (defn get-all-rides
+  "Get all 'joinable' rides and driver info"
   [user]
   (let [user (get-user-by-email user)]
     (seq (select rides
@@ -106,10 +116,49 @@
     (transaction
       (insert joinedrides
               (values {:users_id user
-                       :rides_id ride}))
+                       :rides_id ride
+                       :rated false}))
       (update rides
               (set-fields {:seats (raw "seats - 1")})
               (where {:id ride})))))
+
+(defn user-leave-ride
+  [email ride]
+  (let [user (get-user-by-email email)]
+    (delete joinedrides
+            (where (and {:users_id user}
+                        {:rides_id ride})))))
+
+(defn delete-ride
+  [ride]
+  (transaction
+    (delete joinedrides
+            (where {:rides_id ride}))
+    (delete rides
+            (where {:id ride}))))
+
+(defn rate-ride
+  [ride rating]
+  (if-let [drivers (seq (select users
+                           (where {:id [in (subselect rides
+                                                      (fields :users_id)
+                                                      (where {:id [in (subselect joinedrides
+                                                                                 (fields :rides_id)
+                                                                                 (where {:id ride}))]}))]})))]
+    (let [driver (first drivers)
+          new-rating (/ (+ (* (:rating driver)
+                              (:numvotes driver))
+                           rating)
+                        (+ (:numvotes driver) 1))]
+      (transaction
+        (update users
+                (where {:id (:id driver)})
+                (set-fields {:rating new-rating
+                             :numvotes (raw "numvotes + 1")}))
+        (update joinedrides
+                (where {:id ride})
+                (set-fields {:rated true}))))
+    nil))
 
 (defn save-ride
   "Save a ride to the database"
@@ -134,6 +183,10 @@
                      :seats       (:seats ride)
                      :price       (:price ride)
                      :notes       (:notes ride)}))))
+
+(defn update-ride
+  [user ride]
+  1)
 
 (defn save-user
   "Save a user to the database"
@@ -192,7 +245,8 @@
       "joinedrides"
       [:id "SERIAL" "PRIMARY KEY"]
       [:users_id "SERIAL" "REFERENCES users(id)"]
-      [:rides_id "SERIAL" "REFERENCES rides(id)"])
+      [:rides_id "SERIAL" "REFERENCES rides(id)"]
+      [:rated "BOOLEAN" "NOT NULL"])
     (sql/do-commands "CREATE INDEX USERIDX ON users(email)")
     (sql/do-commands "CREATE INDEX ORIGIDX ON rides(origin)")
     (sql/do-commands "CREATE INDEX DESTIDX ON rides(destination)")))

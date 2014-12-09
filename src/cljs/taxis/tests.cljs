@@ -63,38 +63,81 @@
               (will-unmount [_]
                             (when (om/get-state owner :server-chan)
                               (close! (om/get-state owner :server-chan))))
-              (render-state [_ {:keys [server-chan]}]
-                            (let [id (:logged data)]
-                              (dom/ul {:class "nav navbar-nav navbar-left"}
-                                      (dom/li
-                                        (dom/a {:href     ""
-                                                :on-click (fn []
-                                                            (put! server-chan {:data [:center]
-                                                                               :src  id
-                                                                               :type :pass
-                                                                               :dest id})
-                                                            false)}
-                                               "Center on me"))
-                                      (dom/li
-                                        (dom/a {:href     ""
-                                                :on-click (fn []
-                                                            (secretary/dispatch! "/ride/create")
-                                                            false)}
-                                               "Create a Ride"))
-                                      (dom/li
-                                        (dom/a {:href     ""
-                                                :on-click (fn []
-                                                            (secretary/dispatch! "/ride/list")
-                                                            false)}
-                                               "Find Rides"))
-                                      (dom/li
-                                        (dom/a {:href     ""
-                                                :on-click (fn []
-                                                            (secretary/dispatch! "/ride/list/mine")
-                                                            false)}
-                                               "My Rides"))))))
+              (render [_]
+                      (dom/ul {:class "nav navbar-nav navbar-left"}
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/create")
+                                                    false)}
+                                       "Create a Ride"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/past")
+                                                    false)}
+                                       "Rate a Past Ride"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list")
+                                                    false)}
+                                       "Find Rides"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/joined")
+                                                    false)}
+                                       "My Joined Rides"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/mine")
+                                                    false)}
+                                       "My Created Rides")))))
 
-(defn- set-location [data]
+(defcomponent offline-pass
+              [data owner]
+              (render [_]
+                      (dom/ul {:class "nav navbar-nav navbar-left"}
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/pass")
+                                                    false)}
+                                       "Find Taxis"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/create")
+                                                    false)}
+                                       "Create a Ride"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/past")
+                                                    false)}
+                                       "Rate a Past Ride"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list")
+                                                    false)}
+                                       "Find Rides"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/joined")
+                                                    false)}
+                                       "My Joined Rides"))
+                              (dom/li
+                                (dom/a {:href     ""
+                                        :on-click (fn []
+                                                    (secretary/dispatch! "/ride/list/mine")
+                                                    false)}
+                                       "My Created Rides")))))
+
+(defn set-location [data]
   (let [c (chan)]
     (.getCurrentPosition js/navigator.geolocation #(put! c %))
     (go

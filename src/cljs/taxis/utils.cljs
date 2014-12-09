@@ -21,3 +21,8 @@
   (if active?
     " active"
     ""))
+
+(defn- active-rating [id rating]
+  (if (= id rating)
+    " active"
+    ""))

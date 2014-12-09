@@ -117,9 +117,9 @@
 
 (defcomponent create-ride
               "Create ride first step: locations"
-              [data owner {:keys [lat lon zoom] :or {lat 38.752739
-                                                     lon -9.184769
-                                                     zoom 14}}]
+              [data owner {:keys [lat lon zoom edit?] :or {lat 38.752739
+                                                           lon -9.184769
+                                                           zoom 14}}]
               (init-state [_]
                           {:dir-rend    nil
                            :last-req    ""
@@ -135,7 +135,9 @@
                            (.log js/console )))
               (render [_]
                       (dom/div {:class "row"}
-                               (dom/h1 "Create Ride")
+                               (if edit?
+                                 (dom/h1 "Edit Ride")
+                                 (dom/h1 "Create Ride"))
                                (dom/div {:class "col-md-5 col-md-offset-1"}
                                         (dom/div {:role "form" :class "jumbotron"}
                                                  (dom/div {:class "form-group"}
@@ -185,9 +187,13 @@
                                                                                         (dom/button {:class    "btn btn-default"
                                                                                                      :on-click #(position-to-current data owner :destination)}
                                                                                                     "Current")))))
-                                                 (dom/button {:class "btn btn-primary pull-right"
+                                                 (if edit?
+                                                   (dom/button {:class "btn btn-primary pull-right"
+                                                                :on-click #(secretary/dispatch! "/ride/edit/2")}
+                                                               "Next")
+                                                   (dom/button {:class "btn btn-primary pull-right"
                                                               :on-click #(secretary/dispatch! "/ride/create/2")}
-                                                             "Next")))
+                                                             "Next"))))
                                (dom/div {:class "col-md-5"}
                                         (dom/div {:style {:height "350px"} :ref "map"})))))
 
@@ -248,7 +254,7 @@
 
 (defcomponent second-step
               "Create ride second step: time and day"
-              [data owner]
+              [data owner {:keys [edit?]}]
               (will-mount [_]
                           (let [link1 (gdom/createElement "script")
                                 link2 (gdom/createElement "script")
@@ -287,7 +293,9 @@
                               (.appendChild css3))))
               (render [_]
                       (dom/div {:class "row"}
-                               (dom/h1 "Create Ride")
+                               (if edit?
+                                 (dom/h1 "Edit Ride")
+                                 (dom/h1 "Create Ride"))
                                (dom/div {:class "col-md-6 col-md-offset-3"}
                                         (dom/div {:role "form" :class "jumbotron"}
                                                  (dom/div {:class "form-group"}
@@ -371,16 +379,28 @@
                                                                           (dom/span {:class "glyphicon glyphicon-ok pull-right"
                                                                                      :style {:display (util/display
                                                                                                         (get-in data [:ride :second-step :sunday]))}}))))
-                                                 (dom/button {:class    "btn btn-primary pull-left"
-                                                              :on-click #(secretary/dispatch! "/ride/create")}
-                                                             "Previous")
+                                                 (if edit?
+                                                   (dom/button {:class    "btn btn-primary pull-left"
+                                                                :on-click #(secretary/dispatch! "/ride/edit")}
+                                                               "Previous")
+                                                   (dom/button {:class    "btn btn-primary pull-left"
+                                                                :on-click #(secretary/dispatch! "/ride/create")}
+                                                               "Previous"))
                                                  (if (get-in data [:ride :first-step :driving?])
-                                                   (dom/button {:class    "btn btn-primary pull-right"
-                                                              :on-click #(secretary/dispatch! "/ride/create/3")}
-                                                             "Next")
-                                                   (dom/button {:class "btn btn-primary pull-right"
-                                                                :on-click #(secretary/dispatch! "/ride/create/done")}
-                                                               "Finish")))))))
+                                                   (if edit?
+                                                     (dom/button {:class    "btn btn-primary pull-right"
+                                                                  :on-click #(secretary/dispatch! "/ride/edit/3")}
+                                                                 "Next")
+                                                     (dom/button {:class    "btn btn-primary pull-right"
+                                                                  :on-click #(secretary/dispatch! "/ride/create/3")}
+                                                                 "Next"))
+                                                   (if edit?
+                                                     (dom/button {:class    "btn btn-primary pull-right"
+                                                                  :on-click #(secretary/dispatch! "/ride/edit/done")}
+                                                                 "Finish")
+                                                     (dom/button {:class    "btn btn-primary pull-right"
+                                                                  :on-click #(secretary/dispatch! "/ride/create/done")}
+                                                                 "Finish"))))))))
 
 (defn- handle-notes-input
   "Handle notes/info text input"
@@ -401,7 +421,7 @@
 
 (defcomponent final-step
               "Create ride final step: vacant seats and ride price"
-              [data owner]
+              [data owner {:keys [edit?]}]
               (init-state [_]
                           {:cash? false
                            :seats 1
@@ -409,7 +429,9 @@
                            :notes ""})
               (render [_]
                       (dom/div {:class "row"}
-                               (dom/h1 "Create Ride")
+                               (if edit?
+                                 (dom/h1 "Edit Ride")
+                                 (dom/h1 "Create Ride"))
                                (dom/div {:class "col-md-6 col-md-offset-3"}
                                         (dom/div {:role "form" :class "jumbotron"}
                                                  (dom/div {:class "form-group"}
@@ -458,18 +480,26 @@
                                                                          :rows  "5"
                                                                          :on-change #(handle-notes-input data %)
                                                                          :value (get-in data [:ride :third-step :notes])}))
-                                                 (dom/button {:class    "btn btn-primary pull-left"
-                                                              :on-click #(secretary/dispatch! "/ride/create/2")}
-                                                             "Previous")
-                                                 (dom/button {:class "btn btn-primary pull-right"
-                                                              :on-click #(secretary/dispatch! "/ride/create/done")}
-                                                             "Finish"))))))
+                                                 (if edit?
+                                                   (dom/button {:class    "btn btn-primary pull-left"
+                                                                :on-click #(secretary/dispatch! "/ride/edit/2")}
+                                                               "Previous")
+                                                   (dom/button {:class    "btn btn-primary pull-left"
+                                                                :on-click #(secretary/dispatch! "/ride/create/2")}
+                                                               "Previous"))
+                                                 (if edit?
+                                                   (dom/button {:class    "btn btn-primary pull-right"
+                                                                :on-click #(secretary/dispatch! "/ride/edit/done")}
+                                                               "Finish")
+                                                   (dom/button {:class    "btn btn-primary pull-right"
+                                                                :on-click #(secretary/dispatch! "/ride/create/done")}
+                                                               "Finish")))))))
 
 (defn- serialize-ride
   "Prepare ride info for database serialization"
   [ride]
-  (.log js/console (get-in ride [:third-step :notes]))
-  {:origin      (get-in ride [:first-step :origin :locality])
+  {:id          (:id ride)
+   :origin      (get-in ride [:first-step :origin :locality])
    :destination (get-in ride [:first-step :destination :locality])
    :driving     (get-in ride [:first-step :driving?])
    :date        (get-in ride [:second-step :date])
@@ -499,11 +529,11 @@
                  :type :placeholder})
     (go
       (let [answer (<! ws-ch)]
-        (.log js/console (str "Got message: " answer))
         (if (= (:message answer) :ok)
           (om/set-state! owner :success? true)
           (om/set-state! owner :failure? true))))
-    (om/update! data :ride {:first-step  {:driving?    true
+    (om/update! data :ride {:id          nil
+                            :first-step  {:driving?    true
                                           :origin      {:lat nil :lon nil :marker nil :locality ""}
                                           :destination {:lat nil :lon nil :marker nil :locality ""}}
                             :second-step {:date       ""
@@ -523,7 +553,7 @@
 
 (defcomponent ride-done
               "Ride created message"
-              [data owner]
+              [data owner {:keys [edit?]}]
               (init-state [_]
                           {:server-chan nil
                            :success?    false
@@ -538,14 +568,26 @@
                                   (send-ride data owner))))))
               (render-state [_ {:keys [success? failure?]}]
                       (dom/div {:class "row"}
-                               (dom/div {:class "col-md-10 col-md-offset-1"}
-                                        (when success?
-                                          (dom/div {:class "alert alert-success"
-                                                    :role  "alert"
-                                                    :style {:text-align "center"}}
-                                                   (dom/h3 "Ride successfully created!")))
-                                        (when failure?
-                                          (dom/div {:class "alert alert-danger"
-                                                    :role  "alert"
-                                                    :style {:text-align "center"}}
-                                                   (dom/h3 "Error creating the ride!")))))))
+                               (if edit?
+                                 (dom/div {:class "col-md-10 col-md-offset-1"}
+                                          (when success?
+                                            (dom/div {:class "alert alert-success"
+                                                      :role  "alert"
+                                                      :style {:text-align "center"}}
+                                                     (dom/h3 "Ride successfully updated")))
+                                          (when failure?
+                                            (dom/div {:class "alert alert-danger"
+                                                      :role  "alert"
+                                                      :style {:text-align "center"}}
+                                                     (dom/h3 "Error updating the ride"))))
+                                 (dom/div {:class "col-md-10 col-md-offset-1"}
+                                          (when success?
+                                            (dom/div {:class "alert alert-success"
+                                                      :role  "alert"
+                                                      :style {:text-align "center"}}
+                                                     (dom/h3 "Ride successfully created")))
+                                          (when failure?
+                                            (dom/div {:class "alert alert-danger"
+                                                      :role  "alert"
+                                                      :style {:text-align "center"}}
+                                                     (dom/h3 "Error creating the ride"))))))))

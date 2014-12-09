@@ -180,11 +180,11 @@
            (if-let [[event params] (<! (:events-in @data))]
              (do
                (cond
-                 (= event :center) (center-map data owner params)
-                 (= event :add-taxis) (add-taxis owner params)
-                 (= event :pickup) (pu-notice owner params)
-                 (= event :pu-accept) (accept-pickup data owner)
-                 (= event :pu-reject) (reject-pickup data owner)
+                 (= event :center)      (center-map data owner params)
+                 (= event :add-taxis)   (add-taxis owner params)
+                 (= event :pickup)      (pu-notice owner params)
+                 (= event :pu-accept)   (accept-pickup data owner)
+                 (= event :pu-reject)   (reject-pickup data owner)
                  (= event :pu-accepted) (wait-for-pickup data owner params)
                  :else (print "unknown event"))
                (recur)))))
@@ -216,6 +216,11 @@
                            (event-loop data owner)))
               (render [_]
                       (dom/div {:class "row"}
+                               (dom/div {:style {:text-align "center"
+                                                 :padding-bottom "15px"}}
+                                        (dom/button {:class    "btn btn-primary"
+                                                     :on-click #(center-map data owner nil)}
+                                                    "Center map on me"))
                                (dom/div {:class "col-md-10 col-md-offset-1"}
                                         (dom/div {:ref "map"
-                                                  :style {:height "550px"}})))))
+                                                  :style {:height "500px"}})))))

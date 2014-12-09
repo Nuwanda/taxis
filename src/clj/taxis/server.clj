@@ -40,10 +40,17 @@
 
 (defn- save-ride
   [user ride ans-ch]
-  (println (str "Creating ride for user: " user))
-  (if (db/save-ride user ride)
-    (put! ans-ch :ok)
-    (put! ans-ch {:error "Couldn't save ride to database"})))
+  (if (:id ride)
+    (do
+      (println (str "Updating ride for user: " user))
+      (if (db/update-ride user ride)
+        (put! ans-ch :ok)
+        (put! ans-ch {:error "Couldn't save ride to database"})))
+    (do
+      (println (str "Creating ride for user: " user))
+      (if (db/save-ride user ride)
+        (put! ans-ch :ok)
+        (put! ans-ch {:error "Couldn't save ride to database"})))))
 
 (defmulti get-rides (fn [user ans-ch type] type))
 
@@ -59,11 +66,42 @@
     (put! ans-ch rides)
     (put! ans-ch :no-rides)))
 
+(defmethod get-rides :joined
+  [user ans-ch _]
+  (if-let [rides (db/get-joined-rides user)]
+    (put! ans-ch rides)
+    (put! ans-ch :no-rides)))
+
+(defmethod get-rides :past
+  [user ans-ch _]
+  (if-let [rides (db/get-past-rides user)]
+    (put! ans-ch rides)
+    (put! ans-ch :no-rides)))
+
 (defn- join-ride
   [ride user ans-ch]
   (if-let [ride (db/user-join-ride user ride)]
     (put! ans-ch {:ok ride})
     (put! ans-ch {:error "Couldn't update ride in database"})))
+
+(defn- leave-ride
+  [ride user ans-ch]
+  (println (str "Got this far, user: " user ", ride: " ride))
+  (if (db/user-leave-ride user ride)
+    (put! ans-ch :ok)
+    (put! ans-ch {:error "Couldn't update ride in database"})))
+
+(defn- delete-ride
+  [ride ans-ch]
+  (if (db/delete-ride ride)
+    (put! ans-ch :ok)
+    (put! ans-ch {:error "Couldn't delete ride"})))
+
+(defn- rate-ride
+  [ride rating ans-ch]
+  (if (db/rate-ride ride rating)
+    (put! ans-ch :ok)
+    (put! ans-ch {:error "Couldn't rate ride"})))
 
 (defn- remove-channel [channel]
   (prn (str "Connected clients: " @clients))
@@ -102,14 +140,24 @@
               (get-rides src ws-ch :mine)
               (if (= data :all-rides)
                 (get-rides src ws-ch :all)
-                (if (:join-ride data)
-                  (join-ride (get-in data [:join-ride :id]) src ws-ch)
-                  (do
-                    (when-not (= data :registered?)
-                      (store-channel src ws-ch type))
-                    (if dest
-                      (send-message data dest ws-ch src)
-                      (broadcast-message data))))))))))))
+                (if (= data :past-rides)
+                  (get-rides src ws-ch :past)
+                  (if (= data :joined-rides)
+                    (get-rides src ws-ch :joined)
+                    (if (:join-ride data)
+                      (join-ride (get-in data [:join-ride :id]) src ws-ch)
+                      (if (:leave-ride data)
+                        (leave-ride (get-in data [:leave-ride :id]) src ws-ch)
+                        (if (:del-ride data)
+                          (delete-ride (:del-ride data) ws-ch)
+                          (if (:rate-ride data)
+                            (rate-ride (get-in data [:rate-ride :id]) (get-in data [:rate-ride :rating]) ws-ch)
+                            (do
+                              (when-not (= data :registered?)
+                                (store-channel src ws-ch type))
+                              (if dest
+                                (send-message data dest ws-ch src)
+                                (broadcast-message data)))))))))))))))))
 
 (defn ws-handler [{:keys [ws-channel]}]
   (go-loop []

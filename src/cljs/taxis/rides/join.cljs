@@ -7,7 +7,8 @@
             [chord.client :refer [ws-ch]]
             [goog.math.Integer :as gint]
             [taxis.utils :as util]
-            [taxis.payments :as pay]))
+            [taxis.payments :as pay]
+            [secretary.core :as secretary]))
 
 (defn- payment
   [ride]
@@ -68,7 +69,7 @@
                                                                                 (dom/div {:class "btn-group"}
                                                                                          (dom/button {:class    "btn btn-default"
                                                                                                       :type     "button"
-                                                                                                      :on-click #(js/alert "MOVE BACK TO RIDES")}
+                                                                                                      :on-click #(secretary/dispatch! "/pass")}
                                                                                                      "No"))))))))
                                         (when failure?
                                           (dom/div {:class "alert alert-danger"

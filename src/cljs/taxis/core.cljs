@@ -28,7 +28,8 @@
                       :logged       false
                       :taxi?        false
                       :registering? false
-                      :ride         {:first-step  {:driving?    true
+                      :ride         {:id          nil
+                                     :first-step  {:driving?    true
                                                    :origin      {:lat nil :lon nil :marker nil :locality ""}
                                                    :destination {:lat nil :lon nil :marker nil :locality ""}}
                                      :second-step {:date       ""
@@ -88,15 +89,65 @@
           (set-components placeholder home-placeholder))
 
 (defroute "/ride/list" {}
-          (set-components placeholder ride-list/all-rides))
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-list/all-rides
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :shared {:edit-chan  (chan)
+                               :del-chan   (chan)
+                               :leave-chan (chan)
+                               :rate-chan  (chan)}})))
 
 (defroute "/ride/list/mine" {}
-          (set-components placeholder ride-list/my-rides))
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-list/my-rides
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :shared {:edit-chan  (chan)
+                               :del-chan   (chan)
+                               :leave-chan (chan)
+                               :rate-chan  (chan)}})))
+
+(defroute "/ride/list/joined" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-list/joined-rides
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :shared {:edit-chan  (chan)
+                               :del-chan   (chan)
+                               :leave-chan (chan)
+                               :rate-chan  (chan)}})))
+
+(defroute "/ride/list/past" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-list/past-rides
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :shared {:edit-chan  (chan)
+                               :del-chan   (chan)
+                               :leave-chan (chan)
+                               :rate-chan  (chan)}})))
 
 (defroute "/ride/join/:id" [id]
           (do
-            (om/root placeholder
-                     nil
+            (om/root tests/offline-pass
+                     app-state
                      {:target (. js/document (getElementById "test-buttons"))})
             (om/detach-root (. js/document (getElementById "app")))
             (om/root ride-join/join
@@ -116,17 +167,61 @@
 (defroute "/pass" {}
           (set-components tests/pass-buttons maps/map-view))
 
+(defroute "/ride/edit" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-create/create-ride
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :opts {:edit? true}})))
+
+(defroute "/ride/edit/2" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-create/second-step
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :opts {:edit? true}})))
+
+(defroute "/ride/edit/3" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-create/final-step
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :opts {:edit? true}})))
+
+(defroute "/ride/edit/done" {}
+          (do
+            (om/root tests/offline-pass
+                     app-state
+                     {:target (. js/document (getElementById "test-buttons"))})
+            (om/detach-root (. js/document (getElementById "app")))
+            (om/root ride-create/ride-done
+                     app-state
+                     {:target (. js/document (getElementById "app"))
+                      :opts {:edit? true}})))
+
 (defroute "/ride/create" {}
-          (set-components placeholder ride-create/create-ride))
+          (set-components tests/offline-pass ride-create/create-ride))
 
 (defroute "/ride/create/2" {}
-          (set-components placeholder ride-create/second-step))
+          (set-components tests/offline-pass ride-create/second-step))
 
 (defroute "/ride/create/3" {}
-          (set-components placeholder ride-create/final-step))
+          (set-components tests/offline-pass ride-create/final-step))
 
 (defroute "/ride/create/done" {}
-          (set-components placeholder ride-create/ride-done))
+          (set-components tests/offline-pass ride-create/ride-done))
 
 
 ;;Om rendering
