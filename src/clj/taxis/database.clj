@@ -140,11 +140,11 @@
 (defn rate-ride
   [ride rating]
   (if-let [drivers (seq (select users
-                           (where {:id [in (subselect rides
-                                                      (fields :users_id)
-                                                      (where {:id [in (subselect joinedrides
-                                                                                 (fields :rides_id)
-                                                                                 (where {:id ride}))]}))]})))]
+                                (where {:id [in (subselect rides
+                                                           (fields :users_id)
+                                                           (where {:id [in (subselect joinedrides
+                                                                                      (fields :rides_id)
+                                                                                      (where {:id ride}))]}))]})))]
     (let [driver (first drivers)
           new-rating (/ (+ (* (:rating driver)
                               (:numvotes driver))
@@ -186,7 +186,28 @@
 
 (defn update-ride
   [user ride]
-  1)
+  (println (str "User: " user ", ride: " ride))
+  (let [user_id (get-user-by-email user)]
+    (update rides
+            (where {:id (:id ride)})
+            (set-fields {:users_id    user_id
+                         :origin      (:origin ride)
+                         :destination (:destination ride)
+                         :driving     (:driving ride )
+                         :date        (raw (str "to_date(" "'" (:date ride) "'" ",'DD Month YYYY')"))
+                         :time        (raw (str "to_timestamp(" "'" (:time ride) "'" ",'HH12:MI AM')"))
+                         :recurrent   (:recurrent ride)
+                         :monday      (:monday ride)
+                         :tuesday     (:tuesday ride)
+                         :wednesday   (:wednesday ride)
+                         :thursday    (:thursday ride)
+                         :friday      (:friday ride)
+                         :saturday    (:saturday ride)
+                         :sunday      (:sunday ride)
+                         :cash        (:cash ride)
+                         :seats       (:seats ride)
+                         :price       (:price ride)
+                         :notes       (:notes ride)}))))
 
 (defn save-user
   "Save a user to the database"
